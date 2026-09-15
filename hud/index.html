@@ -55,12 +55,7 @@ body{
   background-size:46px 46px;
   mask:radial-gradient(120% 90% at 50% 46%,#000 40%,transparent 92%);
 }
-.atmos::after{
-  content:"";position:absolute;left:0;right:0;height:2px;
-  background:linear-gradient(90deg,transparent,rgba(120,210,238,.14),transparent);
-  animation:scan 7s linear infinite;
-}
-@keyframes scan{0%{top:-2%}100%{top:102%}}
+/* (drifting scanline removed — was distracting) */
 
 /* fixed 1920x1200 design, scaled to fit any screen (letterbox) */
 .stage{position:absolute;left:50%;top:50%;width:1920px;height:1200px;
@@ -83,9 +78,9 @@ body{
 /* base: a faint full ring for structure; the bright arc lives on 2 adjacent
    sides (a clear ~half-ring glow) with the rest TRANSPARENT so the rotation
    is unmistakable. */
-.reactor .ring{border:3px solid transparent;
-  box-shadow:0 0 0 0.5px rgba(120,210,238,.10) inset;
-  filter:drop-shadow(0 0 7px rgba(120,210,238,.85))}
+.reactor .ring{border:5px solid transparent;
+  box-shadow:0 0 0 0.5px rgba(120,210,238,.12) inset;
+  filter:drop-shadow(0 0 9px rgba(120,210,238,.95))}
 .r1{width:540px;height:540px;border-top-color:var(--ice-bright);border-right-color:var(--ice);
   animation:spin 11s linear infinite}                     /* CW  */
 .r2{width:456px;height:456px;border-bottom-color:var(--ice-bright);border-left-color:var(--ice);
