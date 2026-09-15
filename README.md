@@ -1,9 +1,9 @@
-# HeroHUD
+# Rayo
 
 **Turn your Linux desktop into your favourite comic-hero interface.**
 Fluid. Animated. Live. Free.
 
-HeroHUD is an open-source, themeable heads-up display for Linux desktops.
+Rayo is an open-source, themeable heads-up display for Linux desktops.
 It overlays a living, breathing sci-fi interface on your wallpaper —
 a glowing arc-reactor that pulses, glassmorphism panels that show your
 *real* system stats (CPU, memory, battery, network), rotating reticles,
@@ -72,7 +72,7 @@ The living-orb technique (three concentric radial-gradient layers animated on
 non-synchronising timings for organic motion) and the glassmorphism panel
 recipe were studied from [JashanMaan28/Zorin](https://github.com/JashanMaan28/Zorin)
 (MIT). Arc-reactor / HUD composition is original. Iron Man, JARVIS, FRIDAY and
-related names are trademarks of their owners — HeroHUD ships no copyrighted
+related names are trademarks of their owners — Rayo ships no copyrighted
 artwork; themes are original interpretations.
 
 ## License

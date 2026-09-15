@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# HeroHUD — start the live data bridge + serve the HUD, then open it.
+# Rayo — start the live data bridge + serve the HUD, then open it.
 set -e
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PORT="${1:-8099}"

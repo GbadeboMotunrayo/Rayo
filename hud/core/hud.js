@@ -1,5 +1,5 @@
 /* ============================================================
-   HeroHUD core driver
+   Rayo core driver
    - Renders live system stats into the HUD.
    - Data provider: tries GET ./stats.json (the real overlay writes
      this from /proc every second); if absent, generates smooth
@@ -74,6 +74,20 @@
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KiB`;
     return `${(bytes / 1024 / 1024).toFixed(1)} MiB`;
   };
+  const fmtDur = (min) => {
+    if (min == null) return '';
+    if (min <= 0) return '';
+    const h = Math.floor(min / 60), m = min % 60;
+    return h ? `${h}h ${String(m).padStart(2, '0')}m` : `${m}m`;
+  };
+  const battLabel = (d) => {
+    const status = d.batt_status || (d.charging ? 'Charging' : 'Discharging');
+    if (status === 'Full' || d.battery >= 100 && d.charging) return 'full · on AC';
+    const t = fmtDur(d.batt_min);
+    if (status === 'Charging') return t ? `charging · ${t} to full` : 'charging';
+    if (status === 'Discharging') return t ? `${t} left` : 'on battery';
+    return d.charging ? 'charging' : 'on battery';
+  };
   const fmtUptime = (bootMs) => {
     let s = Math.floor((Date.now() - bootMs) / 1000);
     const d = Math.floor(s / 86400); s -= d * 86400;
@@ -89,7 +103,9 @@
     // left cluster
     const batt = ease('batt', d.battery);
     $('pwr-v').innerHTML = `${Math.round(batt)}<span class="u">%</span>`;
-    $('pwr-a').textContent = d.charging ? 'charging' : 'on battery';
+    $('pwr-a').textContent = battLabel(d);
+    // battery card glows gold while charging
+    $('pwr').classList.toggle('charging', !!d.charging && d.batt_status !== 'Full');
     paintBar($('pwr-b'), batt);
 
     const cpu = ease('cpu', d.cpu);

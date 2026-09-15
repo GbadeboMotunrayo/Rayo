@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-HeroHUD stats bridge.
+Rayo stats bridge.
 Reads live system metrics from /proc and /sys and writes them to
 hud/stats.json every second. The HUD front-end polls that file.
 Pure standard library — no dependencies, works on any Linux.
@@ -83,15 +83,45 @@ def disk_info(path="/"):
 
 
 # ---- battery ----------------------------------------------------------------
+def _num(path):
+    v = read(path)
+    try:
+        return float(v)
+    except ValueError:
+        return None
+
 def battery_info():
+    """Return (percent, charging, status, minutes_remaining_or_None)."""
     base = first_glob("/sys/class/power_supply/BAT*")
     if not base:
-        return 100, True  # desktop / no battery → report full & "powered"
+        return 100, True, "AC", None  # desktop / no battery
     pct = read(os.path.join(base, "capacity"), "100")
     status = read(os.path.join(base, "status"), "Unknown")
-    ac = read("/sys/class/power_supply/AC*/online") or read("/sys/class/power_supply/ACAD/online", "1")
-    charging = status in ("Charging", "Full") or ac == "1"
-    return int(pct) if pct.isdigit() else 100, charging
+    ac = read("/sys/class/power_supply/AC*/online") or read("/sys/class/power_supply/ACAD/online", "")
+    charging = status == "Charging" or (status != "Discharging" and ac == "1")
+
+    # time estimate: prefer charge_* (µAh, µA); fall back to energy_* (µWh, µW)
+    now = _num(os.path.join(base, "charge_now"))
+    full = _num(os.path.join(base, "charge_full"))
+    rate = _num(os.path.join(base, "current_now"))
+    if now is None:
+        now = _num(os.path.join(base, "energy_now"))
+        full = _num(os.path.join(base, "energy_full"))
+        rate = _num(os.path.join(base, "power_now"))
+
+    minutes = None
+    if rate and rate > 0 and now is not None and full is not None:
+        if status == "Charging":
+            minutes = round((full - now) / rate * 60)
+        elif status == "Discharging":
+            minutes = round(now / rate * 60)
+        if minutes is not None and minutes < 0:
+            minutes = None
+    if status == "Full":
+        minutes = 0
+
+    p = int(pct) if pct.isdigit() else 100
+    return p, charging, status, minutes
 
 
 # ---- network (throughput + wifi) -------------------------------------------
@@ -145,13 +175,14 @@ def sample():
     cpu = cpu_percent()
     mem_p, mem_u, mem_t = mem_info()
     disk_p, disk_u, disk_t = disk_info()
-    batt, charging = battery_info()
+    batt, charging, batt_status, batt_min = battery_info()
     down, up, signal, ssid, iface = net_info()
     return {
         "cpu": round(cpu, 1), "freq": cpu_freq_ghz(),
         "mem": mem_p, "mem_used": mem_u, "mem_total": mem_t,
         "disk": disk_p, "disk_used": disk_u, "disk_total": disk_t,
         "battery": batt, "charging": charging,
+        "batt_status": batt_status, "batt_min": batt_min,
         "down": down, "up": up, "signal": signal,
         "ssid": ssid or iface or "—", "iface": iface,
         "boot": boot_ms(), "ts": int(time.time() * 1000),
