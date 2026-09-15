@@ -45,7 +45,9 @@
       this.down = Math.max(0, this.down + (Math.random() - 0.5) * 400 + (Math.random() < 0.1 ? 3000 : 0)) * 0.6;
       this.up = Math.max(0, this.up + (Math.random() - 0.5) * 200) * 0.6;
       return {
-        battery: Math.round(this.batt), charging: true,
+        // honest placeholder state — NOT claiming charging when we don't know
+        battery: Math.round(this.batt), charging: false,
+        batt_status: 'Discharging', batt_min: 142,
         cpu: this.cpu, mem: this.mem, disk: this.disk,
         signal: this.sig, ssid: this.ssid, freq: this.freq,
         mem_used: '4.6', mem_total: '6.9', disk_used: '124', disk_total: '233',
@@ -134,6 +136,17 @@
     $('t-down').textContent = fmtRate(ease('down', d.down, 0.25));
     $('t-up').textContent = fmtRate(ease('up', d.up, 0.25));
     $('t-up2').textContent = fmtUptime(d.boot);
+
+    // honest data-source badge:
+    //   LIVE  — real bridge, fresh (<5s old)
+    //   STALE — real file but the bridge stopped writing (data is old!)
+    //   SIM   — no bridge file at all, showing mock
+    const src = $('data-src');
+    if (src) {
+      const stale = !d.mock && d.ts && (Date.now() - d.ts > 5000);
+      src.textContent = d.mock ? 'SIM · NO BRIDGE' : stale ? 'STALE · BRIDGE DOWN' : 'LIVE';
+      src.classList.toggle('sim', !!(d.mock || stale));
+    }
 
     // hub reacts to CPU load by GLOWING faster/brighter (never rotating):
     // heavier load → quicker bright↔dim pulse on the core and blades.

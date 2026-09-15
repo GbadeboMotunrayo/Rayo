@@ -76,47 +76,22 @@ body{
 }
 .reactor .ring{position:absolute;border-radius:50%;inset:0;margin:auto}
 
-/* outer thin ring + rotating conic sweep */
-.ring-outer{width:560px;height:560px;border:1px solid rgba(120,210,238,.18)}
-.ring-sweep{
-  width:560px;height:560px;
-  background:conic-gradient(from 0deg,
-     transparent 0deg, transparent 300deg,
-     rgba(120,210,238,.0) 300deg, rgba(120,210,238,.55) 355deg, transparent 360deg);
-  mask:radial-gradient(circle, transparent 276px, #000 277px, #000 280px, transparent 281px);
-  -webkit-mask:radial-gradient(circle, transparent 276px, #000 277px, #000 280px, transparent 281px);
-  animation:spin 9s linear infinite;
-}
-/* dashed ring, counter-rotating */
-.ring-dash{
-  width:492px;height:492px;
-  border:1px dashed rgba(120,210,238,.30);
-  animation:spin 60s linear infinite reverse;
-}
-/* tick belt (rendered with repeating-conic) */
-.ring-ticks{
-  width:452px;height:452px;
-  background:repeating-conic-gradient(rgba(120,210,238,.35) 0deg 0.5deg, transparent 0.5deg 5deg);
-  mask:radial-gradient(circle, transparent 214px, #000 215px, #000 226px, transparent 227px);
-  -webkit-mask:radial-gradient(circle, transparent 214px, #000 215px, #000 226px, transparent 227px);
-  /* static tick belt — lets the counter-rotating arcs read clearly */
-}
-/* primary confident ring — static structure */
-.ring-main{width:420px;height:420px;border:2px solid rgba(120,210,238,.55);
-  box-shadow:0 0 24px rgba(120,210,238,.20),inset 0 0 24px rgba(120,210,238,.10)}
-.ring-fine{width:250px;height:250px;border:1px solid rgba(208,224,232,.30)}
-
-/* --- glowing rotating rings (a bright arc travels around each) --- */
-/* first ring: glows, rotates CLOCKWISE */
-.ring-arc-cw{width:420px;height:420px;border:2px solid transparent;
-  border-top-color:var(--ice-bright);border-right-color:rgba(120,210,238,.35);
-  filter:drop-shadow(0 0 6px rgba(120,210,238,.8));
-  animation:spin 8s linear infinite}
-/* third ring: glows, rotates ANTI-CLOCKWISE */
-.ring-arc-ccw{width:344px;height:344px;border:2px solid transparent;
-  border-top-color:var(--ice-bright);border-left-color:rgba(120,210,238,.35);
-  filter:drop-shadow(0 0 6px rgba(120,210,238,.8));
-  animation:spin 6s linear infinite reverse}
+/* --- FIVE concentric rings, all spinning, alternating direction:
+       r1 CW · r2 CCW · r3 CW · r4 CCW · r5 CW.
+       Each = a faint full ring + a bright glowing arc that travels around it.
+       Different speeds so they never sync (organic motion). --- */
+.reactor .ring{border:2px solid rgba(120,210,238,.12);
+  filter:drop-shadow(0 0 5px rgba(120,210,238,.5))}
+.r1{width:540px;height:540px;border-top-color:var(--ice-bright);border-right-color:rgba(120,210,238,.42);
+  animation:spin 15s linear infinite}                     /* CW  */
+.r2{width:456px;height:456px;border-bottom-color:var(--ice-bright);border-left-color:rgba(120,210,238,.42);
+  animation:spin 12s linear infinite reverse}             /* CCW */
+.r3{width:380px;height:380px;border-left-color:var(--ice-bright);border-top-color:rgba(120,210,238,.42);
+  animation:spin 9.5s linear infinite}                    /* CW  */
+.r4{width:312px;height:312px;border-right-color:var(--ice-bright);border-bottom-color:rgba(120,210,238,.42);
+  animation:spin 7.5s linear infinite reverse}            /* CCW */
+.r5{width:246px;height:246px;border-top-color:var(--ice-bright);border-left-color:rgba(120,210,238,.42);
+  animation:spin 5.5s linear infinite}                    /* CW  */
 
 @keyframes spin{to{transform:rotate(360deg)}}
 
@@ -264,8 +239,10 @@ body{
 .baseline .sub{font-family:var(--font-mono);font-size:11px;letter-spacing:2px;color:var(--muted);margin-top:4px}
 .status{position:absolute;right:52px;bottom:64px;z-index:2;text-align:right}
 .status .r{font-family:var(--font-mono);font-size:12px;letter-spacing:2px;color:var(--ice-deep)}
-.status .o{font-family:var(--font-mono);font-size:11px;letter-spacing:1px;color:var(--gold);margin-top:4px}
-.status .o::before{content:"● ";color:var(--gold)}
+.status .o{font-family:var(--font-mono);font-size:11px;letter-spacing:1px;color:var(--ice);margin-top:4px}
+.status .o::before{content:"● ";color:var(--ice)}
+.status .o.sim{color:var(--muted)}
+.status .o.sim::before{color:var(--red)}
 
 @media (prefers-reduced-motion:reduce){
   *{animation-duration:.001ms!important;animation-iteration-count:1!important}
@@ -278,14 +255,11 @@ body{
 <div class="stage">
   <!-- CENTER REACTOR -->
   <div class="reactor">
-    <div class="ring ring-outer"></div>
-    <div class="ring ring-sweep"></div>
-    <div class="ring ring-dash"></div>
-    <div class="ring ring-ticks"></div>
-    <div class="ring ring-main"></div>
-    <div class="ring ring-arc-cw"></div>
-    <div class="ring ring-arc-ccw"></div>
-    <div class="ring ring-fine"></div>
+    <div class="ring r1"></div>
+    <div class="ring r2"></div>
+    <div class="ring r3"></div>
+    <div class="ring r4"></div>
+    <div class="ring r5"></div>
     <span class="cardinal n">000</span>
     <span class="cardinal e">090</span>
     <span class="cardinal s">180</span>
@@ -357,7 +331,7 @@ body{
   </div>
   <div class="status">
     <div class="r">R.A.Y.O</div>
-    <div class="o">ONLINE</div>
+    <div class="o" id="data-src">ONLINE</div>
   </div>
 </div>
 
