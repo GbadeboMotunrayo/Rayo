@@ -23,21 +23,39 @@ Cortana, or their own.
 |-------|-------|
 | Animated HUD front-end (`hud/`) | ✅ working — breathing reactor, glass panels, live gauges, scales to any resolution |
 | System-stats bridge (`overlay/stats.py`) | ✅ working — pure stdlib, reads `/proc` + `/sys`, writes `hud/stats.json` |
-| Desktop overlay window (transparent, click-through, always-below) | 🔜 next — mounts the HUD *on the desktop* behind your windows |
+| Desktop overlay window (transparent, click-through, always-below) | ✅ working — `start.sh` mounts the HUD on the desktop |
 | Theme system + more themes | 🔜 in progress (RAYO ships first) |
 | One-command installer | 🔜 |
 
-## Try it now (browser preview)
+## Quickstart (clone & run)
 
 ```bash
-cd herohud
-python3 overlay/stats.py --interval 1 &     # start the live data bridge
-python3 -m http.server 8099 --directory hud # serve the HUD
-# open http://localhost:8099 in any browser — it shows YOUR real stats
+git clone https://github.com/GbadeboMotunrayo/Rayo.git
+cd Rayo
+./start.sh          # switches on the live desktop overlay
 ```
 
-Without the bridge running it falls back to smooth mock data, so the HUD
-always looks alive.
+That stops anything competing (old conky), sets a clean dark backdrop, and
+launches the transparent overlay — your desktop goes live, showing your real
+CPU, memory, battery (with charge/discharge ETA), disk, and network up/down.
+
+Turn it off and restore your wallpaper:
+
+```bash
+./stop.sh
+```
+
+**Auto-start on login:** copy `overlay/rayo.desktop.example` to
+`~/.config/autostart/rayo.desktop`, with `Exec=` pointing at this repo's
+`start.sh`.
+
+### Just want to preview the HUD in a browser?
+
+```bash
+./run.sh            # serves the HUD at http://localhost:8099 with live data
+```
+
+Without the bridge it falls back to smooth mock data, so it always looks alive.
 
 ## Run it on your desktop (the real overlay)
 
