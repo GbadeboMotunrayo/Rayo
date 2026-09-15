@@ -39,6 +39,30 @@ python3 -m http.server 8099 --directory hud # serve the HUD
 Without the bridge running it falls back to smooth mock data, so the HUD
 always looks alive.
 
+## Run it on your desktop (the real overlay)
+
+No extra install on most GNOME systems (uses `python3-gi`, `gtk-3.0`,
+`webkit2gtk-4.1` — already present). If missing:
+
+```bash
+sudo apt install python3-gi gir1.2-gtk-3.0 gir1.2-webkit2-4.1
+```
+
+Then:
+
+```bash
+python3 overlay/rayo-overlay.py     # transparent, click-through, sits on the desktop
+```
+
+It mounts the HUD as an XWayland desktop-type window (the same technique conky
+uses), behind your normal windows, and starts the stats bridge itself. Quit with
+`pkill -f rayo-overlay.py`. To auto-start on login, copy
+`overlay/rayo.desktop.example` into `~/.config/autostart/` (edit the path first).
+
+> Note: true desktop-layer placement on GNOME/Wayland relies on XWayland
+> window hints; on wlroots compositors (Hyprland, sway) a layer-shell backend
+> is planned for pixel-perfect anchoring.
+
 ## How it works
 
 ```

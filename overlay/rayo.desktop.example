@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=Rayo HUD
+Comment=Animated comic-hero desktop HUD
+Exec=python3 %h/Desktop/Tech/herohud/overlay/rayo-overlay.py
+X-GNOME-Autostart-enabled=true
+Terminal=false
