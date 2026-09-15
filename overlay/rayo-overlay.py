@@ -26,6 +26,12 @@ gi.require_version("WebKit2", "4.1")
 gi.require_version("Gdk", "3.0")
 from gi.repository import Gtk, WebKit2, Gdk, GLib
 import cairo
+# Register pycairo's types (incl. Region) with GObject-Introspection so
+# Gdk.Window.input_shape_combine_region() accepts a cairo.Region.
+try:
+    gi.require_foreign("cairo")
+except Exception:
+    pass
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.normpath(os.path.join(HERE, ".."))
@@ -94,9 +100,18 @@ class Overlay(Gtk.Window):
         # click-through: give the window an EMPTY input region so every click
         # falls through to whatever is beneath it (the desktop / your icons).
         win = self.get_window()
-        if win is not None:
-            empty = cairo.Region()
-            win.input_shape_combine_region(empty, 0, 0)
+        if win is None:
+            return
+        try:
+            gi.require_foreign("cairo")
+            win.input_shape_combine_region(cairo.Region(), 0, 0)
+        except Exception:
+            # The pycairo↔GI bridge (python3-gi-cairo) isn't installed, so we
+            # can't hand GDK an empty input region. The overlay still shows and
+            # works over app windows; only clicks on the bare desktop are caught.
+            print("[rayo] click-through disabled — for it, install the bridge:\n"
+                  "        sudo apt install python3-gi-cairo\n"
+                  "      then restart the overlay.", file=sys.stderr)
 
 
 def main():

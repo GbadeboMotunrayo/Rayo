@@ -99,14 +99,24 @@ body{
   background:repeating-conic-gradient(rgba(120,210,238,.35) 0deg 0.5deg, transparent 0.5deg 5deg);
   mask:radial-gradient(circle, transparent 214px, #000 215px, #000 226px, transparent 227px);
   -webkit-mask:radial-gradient(circle, transparent 214px, #000 215px, #000 226px, transparent 227px);
-  animation:spin 120s linear infinite;
+  /* static tick belt — lets the counter-rotating arcs read clearly */
 }
-/* primary confident ring */
-.ring-main{width:420px;height:420px;border:2px solid rgba(120,210,238,.75);
-  box-shadow:0 0 24px rgba(120,210,238,.25),inset 0 0 24px rgba(120,210,238,.12)}
-.ring-inner{width:344px;height:344px;border:1px solid rgba(120,210,238,.28);
-  animation:spin 40s linear infinite}
-.ring-fine{width:250px;height:250px;border:1px solid rgba(208,224,232,.35)}
+/* primary confident ring — static structure */
+.ring-main{width:420px;height:420px;border:2px solid rgba(120,210,238,.55);
+  box-shadow:0 0 24px rgba(120,210,238,.20),inset 0 0 24px rgba(120,210,238,.10)}
+.ring-fine{width:250px;height:250px;border:1px solid rgba(208,224,232,.30)}
+
+/* --- glowing rotating rings (a bright arc travels around each) --- */
+/* first ring: glows, rotates CLOCKWISE */
+.ring-arc-cw{width:420px;height:420px;border:2px solid transparent;
+  border-top-color:var(--ice-bright);border-right-color:rgba(120,210,238,.35);
+  filter:drop-shadow(0 0 6px rgba(120,210,238,.8));
+  animation:spin 8s linear infinite}
+/* third ring: glows, rotates ANTI-CLOCKWISE */
+.ring-arc-ccw{width:344px;height:344px;border:2px solid transparent;
+  border-top-color:var(--ice-bright);border-left-color:rgba(120,210,238,.35);
+  filter:drop-shadow(0 0 6px rgba(120,210,238,.8));
+  animation:spin 6s linear infinite reverse}
 
 @keyframes spin{to{transform:rotate(360deg)}}
 
@@ -141,16 +151,16 @@ body{
   inset:20%;
   background:radial-gradient(circle at 60% 30%,
     rgba(255,255,255,.55) 0%, rgba(120,210,238,.2) 42%, transparent 72%);
-  animation:orbShimmer 5s ease-in-out infinite;
+  animation:orbShimmer 5s ease-in-out infinite;   /* glow only, no rotation */
 }
-/* segmented reactor blades ring around the orb */
+/* segmented reactor blades ring around the orb — STATIC, only glows */
 .blades{position:absolute;width:210px;height:210px;border-radius:50%;
   background:repeating-conic-gradient(from 0deg,
      var(--ice) 0deg 3deg, transparent 3deg 30deg);
   mask:radial-gradient(circle, transparent 78px, #000 80px, #000 98px, transparent 100px);
   -webkit-mask:radial-gradient(circle, transparent 78px, #000 80px, #000 98px, transparent 100px);
   opacity:.85;
-  animation:spin 24s linear infinite, bladePulse 3s ease-in-out infinite;
+  animation:bladePulse 3s ease-in-out infinite;   /* glow bright↔dim, no spin */
 }
 
 @keyframes orbPulse{
@@ -160,8 +170,8 @@ body{
     box-shadow:0 0 92px rgba(120,210,238,.78),inset 0 0 50px rgba(10,40,50,.5),0 0 150px rgba(166,236,255,.5)}
 }
 @keyframes orbGlow{0%,100%{opacity:.8;transform:scale(1)}50%{opacity:1;transform:scale(1.06)}}
-@keyframes orbShimmer{0%,100%{opacity:.55;transform:rotate(0) scale(1)}50%{opacity:.9;transform:rotate(180deg) scale(1.12)}}
-@keyframes bladePulse{0%,100%{opacity:.7}50%{opacity:.95}}
+@keyframes orbShimmer{0%,100%{opacity:.45;transform:scale(1)}50%{opacity:.9;transform:scale(1.1)}}
+@keyframes bladePulse{0%,100%{opacity:.55}50%{opacity:1}}
 
 /* crosshair ticks */
 .tick{position:absolute;background:rgba(120,210,238,.5)}
@@ -273,7 +283,8 @@ body{
     <div class="ring ring-dash"></div>
     <div class="ring ring-ticks"></div>
     <div class="ring ring-main"></div>
-    <div class="ring ring-inner"></div>
+    <div class="ring ring-arc-cw"></div>
+    <div class="ring ring-arc-ccw"></div>
     <div class="ring ring-fine"></div>
     <span class="cardinal n">000</span>
     <span class="cardinal e">090</span>

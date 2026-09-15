@@ -135,11 +135,13 @@
     $('t-up').textContent = fmtRate(ease('up', d.up, 0.25));
     $('t-up2').textContent = fmtUptime(d.boot);
 
-    // orb reacts to CPU load (busier core = faster/brighter)
+    // hub reacts to CPU load by GLOWING faster/brighter (never rotating):
+    // heavier load → quicker bright↔dim pulse on the core and blades.
+    const pulse = (3 - cpu / 100 * 1.6).toFixed(2) + 's';   // 3s idle → ~1.4s busy
     const orb = document.querySelector('.orb .core');
-    if (orb) orb.style.animationDuration = (3 - cpu / 100 * 1.4).toFixed(2) + 's';
+    if (orb) orb.style.animationDuration = pulse;
     const blades = document.querySelector('.blades');
-    if (blades) blades.style.animationDuration = `${(24 - cpu / 100 * 16).toFixed(1)}s, 3s`;
+    if (blades) blades.style.animationDuration = pulse;
   }
 
   function clock() {
