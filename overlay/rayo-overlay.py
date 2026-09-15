@@ -19,6 +19,11 @@ import os, sys, subprocess, signal, atexit
 
 # Force the X11 backend so we can use X11 desktop-window hints under XWayland.
 os.environ.setdefault("GDK_BACKEND", "x11")
+# WebKitGTK's DMABUF renderer frequently fails *silently* on XWayland/hybrid-GPU
+# setups — the page renders once then freezes (no animation). Disabling it falls
+# back to a renderer that ticks reliably. This is the usual fix for "the overlay
+# shows but nothing animates".
+os.environ.setdefault("WEBKIT_DISABLE_DMABUF_RENDERER", "1")
 
 import gi
 gi.require_version("Gtk", "3.0")
@@ -95,6 +100,14 @@ class Overlay(Gtk.Window):
 
         self.connect("destroy", Gtk.main_quit)
         self.connect("realize", self._on_realize)
+
+        # insurance: nudge a repaint ~30x/s so CSS animations keep advancing
+        # even though this is an unfocused, kept-below desktop window.
+        GLib.timeout_add(33, self._keep_ticking)
+
+    def _keep_ticking(self):
+        self.web.queue_draw()
+        return True  # keep the timeout alive
 
     def _on_realize(self, *_):
         # click-through: give the window an EMPTY input region so every click

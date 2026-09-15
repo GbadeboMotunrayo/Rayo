@@ -93,6 +93,14 @@ body{
 .r5{width:246px;height:246px;border-top-color:var(--ice-bright);border-left-color:rgba(120,210,238,.42);
   animation:spin 5.5s linear infinite}                    /* CW  */
 
+/* the "ruler" — a tick-mark measurement ring, now SPINNING (CCW) */
+.ruler{width:414px;height:414px;border:none!important;
+  background:repeating-conic-gradient(rgba(166,236,255,.6) 0deg 0.4deg, transparent 0.4deg 5deg);
+  mask:radial-gradient(circle, transparent 195px, #000 196px, #000 207px, transparent 208px);
+  -webkit-mask:radial-gradient(circle, transparent 195px, #000 196px, #000 207px, transparent 208px);
+  filter:drop-shadow(0 0 3px rgba(120,210,238,.5));
+  animation:spin 30s linear infinite reverse}
+
 @keyframes spin{to{transform:rotate(360deg)}}
 
 /* cardinal labels */
@@ -257,6 +265,7 @@ body{
   <div class="reactor">
     <div class="ring r1"></div>
     <div class="ring r2"></div>
+    <div class="ring ruler"></div>
     <div class="ring r3"></div>
     <div class="ring r4"></div>
     <div class="ring r5"></div>
