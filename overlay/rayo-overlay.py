@@ -15,7 +15,8 @@ If missing:  sudo apt install python3-gi gir1.2-gtk-3.0 gir1.2-webkit2-4.1
 Run:     python3 overlay/rayo-overlay.py
 Quit:    pkill -f rayo-overlay.py   (and pkill -f overlay/stats.py)
 """
-import os, sys, subprocess, signal, atexit
+import os, sys, subprocess, signal, atexit, threading, functools
+import http.server
 
 # Force the X11 backend so we can use X11 desktop-window hints under XWayland.
 os.environ.setdefault("GDK_BACKEND", "x11")
@@ -40,8 +41,24 @@ except Exception:
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.normpath(os.path.join(HERE, ".."))
-HUD = os.path.join(ROOT, "hud", "index.html")
+HUD_DIR = os.path.join(ROOT, "hud")
+HUD = os.path.join(HUD_DIR, "index.html")
 STATS = os.path.join(HERE, "stats.py")
+
+
+class _QuietHandler(http.server.SimpleHTTPRequestHandler):
+    def log_message(self, *a):  # silence request logging
+        pass
+
+
+def start_http_server():
+    """Serve hud/ over loopback http so the page can fetch() stats.json.
+    (Browsers block fetch() of file:// URLs, which is why file:// showed only
+    mock data.) Returns (server, port)."""
+    handler = functools.partial(_QuietHandler, directory=HUD_DIR)
+    srv = http.server.ThreadingHTTPServer(("127.0.0.1", 0), handler)  # 0 = free port
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    return srv, srv.server_address[1]
 
 
 def start_stats_bridge():
@@ -57,8 +74,9 @@ def start_stats_bridge():
 
 
 class Overlay(Gtk.Window):
-    def __init__(self):
+    def __init__(self, url):
         super().__init__(type=Gtk.WindowType.TOPLEVEL)
+        self._url = url
 
         # --- transparency ---
         self.set_app_paintable(True)
@@ -96,7 +114,7 @@ class Overlay(Gtk.Window):
         # transparent webview background so the desktop shows through
         self.web.set_background_color(Gdk.RGBA(0, 0, 0, 0))
         self.add(self.web)
-        self.web.load_uri("file://" + HUD)
+        self.web.load_uri(self._url)
 
         self.connect("destroy", Gtk.main_quit)
         self.connect("realize", self._on_realize)
@@ -132,15 +150,21 @@ def main():
         sys.exit(f"[rayo] HUD not found at {HUD}")
 
     bridge = start_stats_bridge()
+    server, port = start_http_server()
+    url = f"http://127.0.0.1:{port}/index.html"
 
     def cleanup():
         if bridge and bridge.poll() is None:
             bridge.terminate()
+        try:
+            server.shutdown()
+        except Exception:
+            pass
     atexit.register(cleanup)
     signal.signal(signal.SIGINT, lambda *_: Gtk.main_quit())
     signal.signal(signal.SIGTERM, lambda *_: Gtk.main_quit())
 
-    win = Overlay()
+    win = Overlay(url)
     win.show_all()
     Gtk.main()
     cleanup()

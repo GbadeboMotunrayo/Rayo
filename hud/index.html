@@ -80,18 +80,22 @@ body{
        r1 CW · r2 CCW · r3 CW · r4 CCW · r5 CW.
        Each = a faint full ring + a bright glowing arc that travels around it.
        Different speeds so they never sync (organic motion). --- */
-.reactor .ring{border:2px solid rgba(120,210,238,.12);
-  filter:drop-shadow(0 0 5px rgba(120,210,238,.5))}
-.r1{width:540px;height:540px;border-top-color:var(--ice-bright);border-right-color:rgba(120,210,238,.42);
-  animation:spin 15s linear infinite}                     /* CW  */
-.r2{width:456px;height:456px;border-bottom-color:var(--ice-bright);border-left-color:rgba(120,210,238,.42);
-  animation:spin 12s linear infinite reverse}             /* CCW */
-.r3{width:380px;height:380px;border-left-color:var(--ice-bright);border-top-color:rgba(120,210,238,.42);
-  animation:spin 9.5s linear infinite}                    /* CW  */
-.r4{width:312px;height:312px;border-right-color:var(--ice-bright);border-bottom-color:rgba(120,210,238,.42);
-  animation:spin 7.5s linear infinite reverse}            /* CCW */
-.r5{width:246px;height:246px;border-top-color:var(--ice-bright);border-left-color:rgba(120,210,238,.42);
-  animation:spin 5.5s linear infinite}                    /* CW  */
+/* base: a faint full ring for structure; the bright arc lives on 2 adjacent
+   sides (a clear ~half-ring glow) with the rest TRANSPARENT so the rotation
+   is unmistakable. */
+.reactor .ring{border:3px solid transparent;
+  box-shadow:0 0 0 0.5px rgba(120,210,238,.10) inset;
+  filter:drop-shadow(0 0 7px rgba(120,210,238,.85))}
+.r1{width:540px;height:540px;border-top-color:var(--ice-bright);border-right-color:var(--ice);
+  animation:spin 11s linear infinite}                     /* CW  */
+.r2{width:456px;height:456px;border-bottom-color:var(--ice-bright);border-left-color:var(--ice);
+  animation:spin 9s linear infinite reverse}              /* CCW */
+.r3{width:380px;height:380px;border-left-color:var(--ice-bright);border-top-color:var(--ice);
+  animation:spin 7s linear infinite}                      /* CW  */
+.r4{width:312px;height:312px;border-right-color:var(--ice-bright);border-bottom-color:var(--ice);
+  animation:spin 5.5s linear infinite reverse}            /* CCW */
+.r5{width:246px;height:246px;border-top-color:var(--ice-bright);border-left-color:var(--ice);
+  animation:spin 4s linear infinite}                      /* CW  */
 
 /* the "ruler" — a tick-mark measurement ring, now SPINNING (CCW) */
 .ruler{width:414px;height:414px;border:none!important;
