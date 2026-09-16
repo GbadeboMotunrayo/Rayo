@@ -25,8 +25,8 @@
   --paper:      #d0e0e8;
   --muted:      #60717f;
 
-  --glass:      rgba(10,16,22,0.42);
-  --glass-brd:  rgba(120,210,238,0.22);
+  --glass:      rgba(10,16,22,0.80);   /* solid-ish (no live blur) — cheap */
+  --glass-brd:  rgba(120,210,238,0.24);
   --glass-hi:   rgba(255,255,255,0.06);
 
   --font-ui:    'Inter','Segoe UI',system-ui,sans-serif;
@@ -78,9 +78,10 @@ body{
 /* base: a faint full ring for structure; the bright arc lives on 2 adjacent
    sides (a clear ~half-ring glow) with the rest TRANSPARENT so the rotation
    is unmistakable. */
-.reactor .ring{border:12.5px solid transparent;   /* 66% thicker than base */
-  box-shadow:0 0 0 0.5px rgba(120,210,238,.12) inset;
-  filter:drop-shadow(0 0 5px rgba(120,210,238,.55))}  /* tight, dim glow */
+/* NOTE: no drop-shadow/box-shadow here — those re-rasterize every frame on a
+   spinning element and were the bulk of the CPU cost under software rendering.
+   The thick bright borders carry the look on their own. */
+.reactor .ring{border:12.5px solid transparent}
 .r1{width:540px;height:540px;border-top-color:var(--ice-bright);border-right-color:var(--ice);
   animation:spin 11s linear infinite}                     /* CW  */
 .r2{width:456px;height:456px;border-bottom-color:var(--ice-bright);border-left-color:var(--ice);
@@ -97,8 +98,7 @@ body{
   background:repeating-conic-gradient(rgba(166,236,255,.6) 0deg 0.4deg, transparent 0.4deg 5deg);
   mask:radial-gradient(circle, transparent 195px, #000 196px, #000 207px, transparent 208px);
   -webkit-mask:radial-gradient(circle, transparent 195px, #000 196px, #000 207px, transparent 208px);
-  filter:drop-shadow(0 0 3px rgba(120,210,238,.5));
-  animation:spin 30s linear infinite reverse}
+  animation:spin 30s linear infinite reverse}   /* no drop-shadow (per-frame cost) */
 
 @keyframes spin{to{transform:rotate(360deg)}}
 
@@ -147,11 +147,11 @@ body{
 }
 
 @keyframes orbPulse{
-  /* pulse the INTERNAL luminosity bright↔dim; outer glow stays tight/contained */
-  0%,100%{transform:scale(1);opacity:.95;
-    box-shadow:inset 0 0 40px rgba(255,255,255,.22),inset 0 0 20px rgba(233,249,255,.30),0 0 12px rgba(120,210,238,.35)}
-  50%{transform:scale(1.02);opacity:1;
-    box-shadow:inset 0 0 56px rgba(255,255,255,.42),inset 0 0 26px rgba(233,249,255,.5),0 0 18px rgba(120,210,238,.5)}
+  /* cheap pulse: only transform+opacity animate (compositor-friendly).
+     The box-shadow stays static (set on .core) — animating it repainted the
+     orb every frame. The .glow/.hi layers give the bright↔dim feel. */
+  0%,100%{transform:scale(1);opacity:.94}
+  50%{transform:scale(1.02);opacity:1}
 }
 @keyframes orbGlow{0%,100%{opacity:.8;transform:scale(1)}50%{opacity:1;transform:scale(1.06)}}
 @keyframes orbShimmer{0%,100%{opacity:.45;transform:scale(1)}50%{opacity:.9;transform:scale(1.1)}}
@@ -171,12 +171,9 @@ body{
   background:var(--glass);
   border:1px solid var(--glass-brd);
   border-radius:14px;
-  backdrop-filter:blur(14px) saturate(1.1);
-  -webkit-backdrop-filter:blur(14px) saturate(1.1);
-  box-shadow:
-    0 10px 40px rgba(0,0,0,.45),
-    inset 0 1px 0 var(--glass-hi),
-    0 0 0 1px rgba(120,210,238,.06);
+  /* backdrop-filter blur removed — it re-blurs every frame under software
+     rendering and was a top CPU cost. Solid translucent fill reads the same. */
+  box-shadow:0 8px 30px rgba(0,0,0,.5), inset 0 1px 0 var(--glass-hi);
   padding:16px 18px;
   animation:rise .6s cubic-bezier(.2,.7,.2,1) both;
 }
