@@ -78,9 +78,9 @@ body{
 /* base: a faint full ring for structure; the bright arc lives on 2 adjacent
    sides (a clear ~half-ring glow) with the rest TRANSPARENT so the rotation
    is unmistakable. */
-.reactor .ring{border:7.5px solid transparent;   /* +50% thicker */
+.reactor .ring{border:10.8px solid transparent;   /* thicker (two +20% steps) */
   box-shadow:0 0 0 0.5px rgba(120,210,238,.12) inset;
-  filter:drop-shadow(0 0 10px rgba(120,210,238,1))}
+  filter:drop-shadow(0 0 5px rgba(120,210,238,.55))}  /* glow radius -50%, dimmer */
 .r1{width:540px;height:540px;border-top-color:var(--ice-bright);border-right-color:var(--ice);
   animation:spin 11s linear infinite}                     /* CW  */
 .r2{width:456px;height:456px;border-bottom-color:var(--ice-bright);border-left-color:var(--ice);
