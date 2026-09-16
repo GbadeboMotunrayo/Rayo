@@ -21,13 +21,11 @@
   window.addEventListener('resize', fitScale);
   fitScale();
 
-  // ---- smooth value interpolation (eased toward target) --------------------
-  const state = {};
-  function ease(key, target, k = 0.12) {
-    if (state[key] === undefined) state[key] = target;
-    state[key] += (target - state[key]) * k;
-    return state[key];
-  }
+  // Values are set directly once per second; the progress bars glide via their
+  // CSS `transition: width` (see stylesheet). We deliberately do NOT re-paint
+  // every frame — doing so kept restarting the CSS transition and made the
+  // numbers/bars flicker ("glitch") in the info panels.
+  function ease(_key, target) { return target; }
 
   // ---- mock provider: realistic drift when no stats.json present -----------
   const mock = {
@@ -164,10 +162,9 @@
   }
 
   // ---- loops ---------------------------------------------------------------
-  let lastData = mock.step();
-  async function tick() { lastData = await fetchStats(); render(lastData); }
+  // One update per second. Bars glide via CSS transitions; no per-frame repaint
+  // (that caused the info-panel flicker). The clock updates on its own second.
+  async function tick() { render(await fetchStats()); }
   clock(); setInterval(clock, 1000);
   tick(); setInterval(tick, 1000);
-  // fast loop: re-render the SAME data so eased values glide smoothly (no refetch)
-  setInterval(() => render(lastData), 90);
 })();
