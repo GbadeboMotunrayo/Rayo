@@ -65,7 +65,7 @@ body{
    CENTER — the breathing arc reactor
    ============================================================ */
 .reactor{
-  position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+  position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) scale(0.75); /* 25% smaller */
   width:560px;height:560px;
   display:grid;place-items:center;
 }
@@ -82,40 +82,43 @@ body{
    border technique didn't render in the WebKitGTK overlay's software mode, but
    this does. Each ring is a ~12px band showing a bright arc that travels as it
    spins. No filter/border → also cheap. */
-.reactor .ring{border:none}
-.r1{width:540px;height:540px;
+/* Directions (outer→inner): CW · CCW · CW(ruler) · CCW · CW · CCW.
+   Each arc starts at a different clock position (from Xdeg: 0=12:00, 60=2:00,
+   120=4:00, 180=6:00, 240=8:00, 300=10:00) so they're spread, not synced.
+   Bands 4.5px (25% thinner). A dark drop-shadow gives a 3D raised feel. */
+.reactor .ring{border:none;filter:drop-shadow(0 2px 2px rgba(0,0,0,.7))}
+.r1{width:540px;height:540px;                              /* ring1 · 12:00 · CW */
   background:conic-gradient(from 0deg,var(--ice-bright),var(--ice) 55deg,rgba(120,210,238,.12) 120deg,transparent 165deg);
-  -webkit-mask:radial-gradient(circle,transparent 263px,#000 264px,#000 270px,transparent 271px);
-  mask:radial-gradient(circle,transparent 263px,#000 264px,#000 270px,transparent 271px);
-  animation:spin 11s linear infinite}                     /* CW  */
-.r2{width:456px;height:456px;
-  background:conic-gradient(from 0deg,var(--ice-bright),var(--ice) 55deg,rgba(120,210,238,.12) 120deg,transparent 165deg);
-  -webkit-mask:radial-gradient(circle,transparent 221px,#000 222px,#000 228px,transparent 229px);
-  mask:radial-gradient(circle,transparent 221px,#000 222px,#000 228px,transparent 229px);
-  animation:spin 9s linear infinite reverse}              /* CCW */
-.r3{width:380px;height:380px;
-  background:conic-gradient(from 0deg,var(--ice-bright),var(--ice) 55deg,rgba(120,210,238,.12) 120deg,transparent 165deg);
-  -webkit-mask:radial-gradient(circle,transparent 183px,#000 184px,#000 190px,transparent 191px);
-  mask:radial-gradient(circle,transparent 183px,#000 184px,#000 190px,transparent 191px);
-  animation:spin 7s linear infinite}                      /* CW  */
-.r4{width:312px;height:312px;
-  background:conic-gradient(from 0deg,var(--ice-bright),var(--ice) 55deg,rgba(120,210,238,.12) 120deg,transparent 165deg);
-  -webkit-mask:radial-gradient(circle,transparent 149px,#000 150px,#000 156px,transparent 157px);
-  mask:radial-gradient(circle,transparent 149px,#000 150px,#000 156px,transparent 157px);
-  animation:spin 5.5s linear infinite reverse}            /* CCW */
-.r5{width:246px;height:246px;
-  background:conic-gradient(from 0deg,var(--ice-bright),var(--ice) 55deg,rgba(120,210,238,.12) 120deg,transparent 165deg);
-  -webkit-mask:radial-gradient(circle,transparent 116px,#000 117px,#000 123px,transparent 124px);
-  mask:radial-gradient(circle,transparent 116px,#000 117px,#000 123px,transparent 124px);
-  animation:spin 4s linear infinite}                      /* CW  */
+  -webkit-mask:radial-gradient(circle,transparent 265px,#000 265.5px,#000 270px,transparent 271px);
+  mask:radial-gradient(circle,transparent 265px,#000 265.5px,#000 270px,transparent 271px);
+  animation:spin 11s linear infinite}
+.r2{width:456px;height:456px;                              /* ring2 · 6:00 · CCW */
+  background:conic-gradient(from 180deg,var(--ice-bright),var(--ice) 55deg,rgba(120,210,238,.12) 120deg,transparent 165deg);
+  -webkit-mask:radial-gradient(circle,transparent 223px,#000 223.5px,#000 228px,transparent 229px);
+  mask:radial-gradient(circle,transparent 223px,#000 223.5px,#000 228px,transparent 229px);
+  animation:spin 9s linear infinite reverse}
+.r3{width:380px;height:380px;                              /* ring4 · 8:00 · CCW */
+  background:conic-gradient(from 240deg,var(--ice-bright),var(--ice) 55deg,rgba(120,210,238,.12) 120deg,transparent 165deg);
+  -webkit-mask:radial-gradient(circle,transparent 185px,#000 185.5px,#000 190px,transparent 191px);
+  mask:radial-gradient(circle,transparent 185px,#000 185.5px,#000 190px,transparent 191px);
+  animation:spin 7s linear infinite reverse}
+.r4{width:312px;height:312px;                              /* ring5 · 4:00 · CW */
+  background:conic-gradient(from 120deg,var(--ice-bright),var(--ice) 55deg,rgba(120,210,238,.12) 120deg,transparent 165deg);
+  -webkit-mask:radial-gradient(circle,transparent 151px,#000 151.5px,#000 156px,transparent 157px);
+  mask:radial-gradient(circle,transparent 151px,#000 151.5px,#000 156px,transparent 157px);
+  animation:spin 5.5s linear infinite}
+.r5{width:246px;height:246px;                              /* ring6 · 10:00 · CCW */
+  background:conic-gradient(from 300deg,var(--ice-bright),var(--ice) 55deg,rgba(120,210,238,.12) 120deg,transparent 165deg);
+  -webkit-mask:radial-gradient(circle,transparent 118px,#000 118.5px,#000 123px,transparent 124px);
+  mask:radial-gradient(circle,transparent 118px,#000 118.5px,#000 123px,transparent 124px);
+  animation:spin 4s linear infinite reverse}
 
-/* the "ruler" — a tick-mark measurement ring, now SPINNING (CCW) */
+/* the "ruler" — tick-mark ring · ring3 · now spinning CW */
 .ruler{width:414px;height:414px;border:none!important;
   background:repeating-conic-gradient(rgba(166,236,255,.6) 0deg 0.4deg, transparent 0.4deg 5deg);
-  mask:radial-gradient(circle, transparent 195px, #000 196px, #000 207px, transparent 208px);
-  -webkit-mask:radial-gradient(circle, transparent 195px, #000 196px, #000 207px, transparent 208px);
-  filter:drop-shadow(0 0 3px rgba(120,210,238,.5));
-  animation:spin 30s linear infinite reverse}
+  mask:radial-gradient(circle, transparent 197px, #000 198px, #000 207px, transparent 208px);
+  -webkit-mask:radial-gradient(circle, transparent 197px, #000 198px, #000 207px, transparent 208px);
+  animation:spin 30s linear infinite}
 
 @keyframes spin{to{transform:rotate(360deg)}}
 
