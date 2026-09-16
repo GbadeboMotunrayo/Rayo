@@ -49,7 +49,8 @@
         cpu: this.cpu, mem: this.mem, disk: this.disk,
         signal: this.sig, ssid: this.ssid, freq: this.freq,
         mem_used: '4.6', mem_total: '6.9', disk_used: '124', disk_total: '233',
-        down: this.down, up: this.up, boot: this.boot, mock: true
+        down: this.down, up: this.up, boot: this.boot, mock: true,
+        wx_temp: '+27°C', wx_cond: 'Partly cloudy', wx_loc: 'Lagos', wx_feels: '+30°C'
       };
     }
   };
@@ -117,6 +118,17 @@
     $('net-v').innerHTML = `${Math.round(sig)}<span class="u">%</span>`;
     $('net-a').textContent = d.ssid.length > 18 ? d.ssid.slice(0, 17) + '…' : d.ssid;
     paintBar($('net-b'), sig);
+
+    // weather tile
+    const clean = (s) => (s || '').replace('+', '');
+    if ($('wx-t')) {
+      $('wx-t').textContent = clean(d.wx_temp) || '—';
+      $('wx-c').textContent = d.wx_cond || '—';
+      // hide location when wttr returns raw coordinates instead of a city name
+      const loc = d.wx_loc || '';
+      $('wx-loc').textContent = /^[\d.,\s-]+$/.test(loc) ? '' : loc.split(',')[0];
+      $('wx-fl').textContent = d.wx_feels ? 'feels ' + clean(d.wx_feels) : '';
+    }
 
     // right telemetry
     $('t-cpu').textContent = Math.round(cpu);

@@ -86,38 +86,38 @@ body{
    Each arc starts at a different clock position (from Xdeg: 0=12:00, 60=2:00,
    120=4:00, 180=6:00, 240=8:00, 300=10:00) so they're spread, not synced.
    Bands 4.5px (25% thinner). A dark drop-shadow gives a 3D raised feel. */
-.reactor .ring{border:none;filter:drop-shadow(0 2px 2px rgba(0,0,0,.7))}
-.r1{width:540px;height:540px;                              /* ring1 · 12:00 · CW */
+/* each ring's mask lives in --m so both the ring AND its shadow copy use it
+   (no fragile mask:inherit). Directions outer→inner: CCW·CW·CCW·CW·CCW·CW. */
+.reactor .ring{border:none;-webkit-mask:var(--m);mask:var(--m)}
+/* real 3D shadow: a dark, offset copy of the same ring behind it. (CSS filter
+   drop-shadow does NOT render in the WebKitGTK overlay; a masked element does.) */
+.reactor .ring::before{content:"";position:absolute;inset:0;background:rgba(0,0,0,.6);
+  -webkit-mask:var(--m);mask:var(--m);transform:translate(2px,3px);z-index:-1}
+.r1{--m:radial-gradient(circle,transparent 265px,#000 265.5px,#000 270px,transparent 271px);
+  width:540px;height:540px;
   background:conic-gradient(from 0deg,var(--ice-bright),var(--ice) 55deg,rgba(120,210,238,.12) 120deg,transparent 165deg);
-  -webkit-mask:radial-gradient(circle,transparent 265px,#000 265.5px,#000 270px,transparent 271px);
-  mask:radial-gradient(circle,transparent 265px,#000 265.5px,#000 270px,transparent 271px);
   animation:spin 11s linear infinite reverse}
-.r2{width:456px;height:456px;                              /* ring2 · 6:00 · CCW */
+.r2{--m:radial-gradient(circle,transparent 223px,#000 223.5px,#000 228px,transparent 229px);
+  width:456px;height:456px;
   background:conic-gradient(from 180deg,var(--ice-bright),var(--ice) 55deg,rgba(120,210,238,.12) 120deg,transparent 165deg);
-  -webkit-mask:radial-gradient(circle,transparent 223px,#000 223.5px,#000 228px,transparent 229px);
-  mask:radial-gradient(circle,transparent 223px,#000 223.5px,#000 228px,transparent 229px);
   animation:spin 9s linear infinite}
-.r3{width:380px;height:380px;                              /* ring4 · 8:00 · CCW */
+.r3{--m:radial-gradient(circle,transparent 185px,#000 185.5px,#000 190px,transparent 191px);
+  width:380px;height:380px;
   background:conic-gradient(from 240deg,var(--ice-bright),var(--ice) 55deg,rgba(120,210,238,.12) 120deg,transparent 165deg);
-  -webkit-mask:radial-gradient(circle,transparent 185px,#000 185.5px,#000 190px,transparent 191px);
-  mask:radial-gradient(circle,transparent 185px,#000 185.5px,#000 190px,transparent 191px);
   animation:spin 7s linear infinite}
-.r4{width:312px;height:312px;                              /* ring5 · 4:00 · CW */
+.r4{--m:radial-gradient(circle,transparent 151px,#000 151.5px,#000 156px,transparent 157px);
+  width:312px;height:312px;
   background:conic-gradient(from 120deg,var(--ice-bright),var(--ice) 55deg,rgba(120,210,238,.12) 120deg,transparent 165deg);
-  -webkit-mask:radial-gradient(circle,transparent 151px,#000 151.5px,#000 156px,transparent 157px);
-  mask:radial-gradient(circle,transparent 151px,#000 151.5px,#000 156px,transparent 157px);
   animation:spin 5.5s linear infinite reverse}
-.r5{width:246px;height:246px;                              /* ring6 · 10:00 · CCW */
+.r5{--m:radial-gradient(circle,transparent 118px,#000 118.5px,#000 123px,transparent 124px);
+  width:246px;height:246px;
   background:conic-gradient(from 300deg,var(--ice-bright),var(--ice) 55deg,rgba(120,210,238,.12) 120deg,transparent 165deg);
-  -webkit-mask:radial-gradient(circle,transparent 118px,#000 118.5px,#000 123px,transparent 124px);
-  mask:radial-gradient(circle,transparent 118px,#000 118.5px,#000 123px,transparent 124px);
   animation:spin 4s linear infinite}
 
-/* the "ruler" — tick-mark ring · ring3 · now spinning CW */
-.ruler{width:414px;height:414px;border:none!important;
+/* the "ruler" — tick-mark ring · spinning CCW */
+.ruler{--m:radial-gradient(circle, transparent 197px, #000 198px, #000 207px, transparent 208px);
+  width:414px;height:414px;border:none!important;
   background:repeating-conic-gradient(rgba(166,236,255,.6) 0deg 0.4deg, transparent 0.4deg 5deg);
-  mask:radial-gradient(circle, transparent 197px, #000 198px, #000 207px, transparent 208px);
-  -webkit-mask:radial-gradient(circle, transparent 197px, #000 198px, #000 207px, transparent 208px);
   animation:spin 30s linear infinite reverse}
 
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -230,9 +230,10 @@ body{
 
 /* left cluster position */
 .left{left:52px;width:280px}
-#pwr{top:150px}
-#sys{top:322px}
-#net{top:494px}
+#pwr{top:120px}
+#sys{top:238px}
+#net{top:356px}
+#weather{top:474px}
 
 /* right telemetry */
 .right{right:52px;top:150px;width:320px}
@@ -323,6 +324,14 @@ body{
     <div class="stat">
       <div class="top"><span class="val" id="net-v">—<span class="u">%</span></span><span class="aux" id="net-a">signal</span></div>
       <div class="bar"><i id="net-b"></i></div>
+    </div>
+  </div>
+  <div class="panel left" id="weather">
+    <div class="head"><span>WEATHER</span><span class="dot"></span></div>
+    <div class="rule"></div>
+    <div class="stat">
+      <div class="top"><span class="val" id="wx-t">—</span><span class="aux" id="wx-c">—</span></div>
+      <div class="top" style="margin-top:8px"><span class="aux" id="wx-loc">—</span><span class="aux" id="wx-fl"></span></div>
     </div>
   </div>
 

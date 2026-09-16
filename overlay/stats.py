@@ -7,7 +7,7 @@ Pure standard library — no dependencies, works on any Linux.
 
 Usage:  python3 overlay/stats.py [--interval 1.0] [--out ../hud/stats.json]
 """
-import json, os, time, glob, argparse, shutil
+import json, os, time, glob, argparse, shutil, threading, urllib.request
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_OUT = os.path.normpath(os.path.join(HERE, "..", "hud", "stats.json"))
@@ -164,6 +164,31 @@ def net_info():
     return round(down), round(up), signal, ssid, (iface or "")
 
 
+# ---- weather (wttr.in, non-blocking, cached ~15 min) -----------------------
+_wx = {"ts": 0.0, "data": {}, "busy": False}
+def _wx_refresh():
+    try:
+        req = urllib.request.Request(
+            "https://wttr.in/?format=%l|%t|%C|%f",
+            headers={"User-Agent": "curl/8"})  # curl UA → plain text, not HTML
+        raw = urllib.request.urlopen(req, timeout=6).read().decode("utf-8").strip()
+        loc, temp, cond, feels = (raw.split("|") + ["", "", "", ""])[:4]
+        if temp:
+            _wx["data"] = {"wx_loc": loc, "wx_temp": temp, "wx_cond": cond, "wx_feels": feels}
+    except Exception:
+        pass
+    finally:
+        _wx["busy"] = False
+
+def weather():
+    now = time.time()
+    if not _wx["busy"] and now - _wx["ts"] > 900:   # refresh at most every 15 min
+        _wx["ts"] = now
+        _wx["busy"] = True
+        threading.Thread(target=_wx_refresh, daemon=True).start()
+    return _wx["data"]
+
+
 def boot_ms():
     for line in read("/proc/stat").splitlines():
         if line.startswith("btime"):
@@ -186,6 +211,7 @@ def sample():
         "down": down, "up": up, "signal": signal,
         "ssid": ssid or iface or "—", "iface": iface,
         "boot": boot_ms(), "ts": int(time.time() * 1000),
+        **weather(),
     }
 
 
