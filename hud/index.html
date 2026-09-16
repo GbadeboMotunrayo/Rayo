@@ -78,9 +78,9 @@ body{
 /* base: a faint full ring for structure; the bright arc lives on 2 adjacent
    sides (a clear ~half-ring glow) with the rest TRANSPARENT so the rotation
    is unmistakable. */
-.reactor .ring{border:10.8px solid transparent;   /* thicker (two +20% steps) */
+.reactor .ring{border:12.5px solid transparent;   /* 66% thicker than base */
   box-shadow:0 0 0 0.5px rgba(120,210,238,.12) inset;
-  filter:drop-shadow(0 0 5px rgba(120,210,238,.55))}  /* glow radius -50%, dimmer */
+  filter:drop-shadow(0 0 5px rgba(120,210,238,.55))}  /* tight, dim glow */
 .r1{width:540px;height:540px;border-top-color:var(--ice-bright);border-right-color:var(--ice);
   animation:spin 11s linear infinite}                     /* CW  */
 .r2{width:456px;height:456px;border-bottom-color:var(--ice-bright);border-left-color:var(--ice);
@@ -114,19 +114,20 @@ body{
 .orb span{position:absolute;border-radius:50%}
 .orb .core{
   inset:0;
-  background:radial-gradient(circle at 32% 30%,
-    var(--ice-bright) 0%, var(--ice) 26%, var(--ice-deep) 62%, #0a2e39 100%);
+  /* solid, opaque blue disc — the glow lives INSIDE the circle */
+  background:radial-gradient(circle at 34% 30%,
+    #e9f9ff 0%, var(--ice-bright) 22%, var(--ice) 52%, var(--ice-deep) 84%, #0c3b49 100%);
   box-shadow:
-    0 0 50px rgba(120,210,238,.5),
-    inset 0 0 40px rgba(10,40,50,.55),
-    0 0 80px rgba(166,236,255,.22);   /* pulled-in bloom so rings read through */
+    inset 0 0 46px rgba(255,255,255,.28),   /* internal luminosity */
+    inset 0 0 20px rgba(233,249,255,.35),
+    0 0 14px rgba(120,210,238,.4);          /* tight edge glow only — no far bloom */
   animation:orbPulse 3s ease-in-out infinite;
 }
 .orb .glow{
   inset:8%;
   background:radial-gradient(circle at 42% 40%,
-    rgba(166,236,255,.45) 0%, rgba(120,210,238,.28) 50%, transparent 100%);
-  box-shadow:0 0 60px rgba(166,236,255,.4),inset 0 0 26px rgba(166,236,255,.18);
+    rgba(200,244,255,.55) 0%, rgba(120,210,238,.32) 50%, transparent 100%);
+  box-shadow:inset 0 0 26px rgba(200,244,255,.25);   /* contained — no outer bloom */
   animation:orbGlow 4s ease-in-out infinite reverse;
 }
 .orb .hi{
@@ -146,10 +147,11 @@ body{
 }
 
 @keyframes orbPulse{
-  0%,100%{transform:scale(1);opacity:.92;
-    box-shadow:0 0 50px rgba(120,210,238,.5),inset 0 0 40px rgba(10,40,50,.55),0 0 80px rgba(166,236,255,.22)}
-  50%{transform:scale(1.025);opacity:1;
-    box-shadow:0 0 66px rgba(120,210,238,.7),inset 0 0 50px rgba(10,40,50,.5),0 0 104px rgba(166,236,255,.38)}
+  /* pulse the INTERNAL luminosity bright↔dim; outer glow stays tight/contained */
+  0%,100%{transform:scale(1);opacity:.95;
+    box-shadow:inset 0 0 40px rgba(255,255,255,.22),inset 0 0 20px rgba(233,249,255,.30),0 0 12px rgba(120,210,238,.35)}
+  50%{transform:scale(1.02);opacity:1;
+    box-shadow:inset 0 0 56px rgba(255,255,255,.42),inset 0 0 26px rgba(233,249,255,.5),0 0 18px rgba(120,210,238,.5)}
 }
 @keyframes orbGlow{0%,100%{opacity:.8;transform:scale(1)}50%{opacity:1;transform:scale(1.06)}}
 @keyframes orbShimmer{0%,100%{opacity:.45;transform:scale(1)}50%{opacity:.9;transform:scale(1.1)}}
