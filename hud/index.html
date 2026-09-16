@@ -78,10 +78,10 @@ body{
 /* base: a faint full ring for structure; the bright arc lives on 2 adjacent
    sides (a clear ~half-ring glow) with the rest TRANSPARENT so the rotation
    is unmistakable. */
-/* NOTE: no drop-shadow/box-shadow here — those re-rasterize every frame on a
-   spinning element and were the bulk of the CPU cost under software rendering.
-   The thick bright borders carry the look on their own. */
-.reactor .ring{border:12.5px solid transparent}
+/* glow restored so the rings actually read (the desktop glitch was the ding
+   extension, not this). Kept moderate (6px) to balance visibility vs cost. */
+.reactor .ring{border:12.5px solid transparent;
+  filter:drop-shadow(0 0 6px rgba(120,210,238,.7))}
 .r1{width:540px;height:540px;border-top-color:var(--ice-bright);border-right-color:var(--ice);
   animation:spin 11s linear infinite}                     /* CW  */
 .r2{width:456px;height:456px;border-bottom-color:var(--ice-bright);border-left-color:var(--ice);
@@ -98,7 +98,8 @@ body{
   background:repeating-conic-gradient(rgba(166,236,255,.6) 0deg 0.4deg, transparent 0.4deg 5deg);
   mask:radial-gradient(circle, transparent 195px, #000 196px, #000 207px, transparent 208px);
   -webkit-mask:radial-gradient(circle, transparent 195px, #000 196px, #000 207px, transparent 208px);
-  animation:spin 30s linear infinite reverse}   /* no drop-shadow (per-frame cost) */
+  filter:drop-shadow(0 0 3px rgba(120,210,238,.5));
+  animation:spin 30s linear infinite reverse}
 
 @keyframes spin{to{transform:rotate(360deg)}}
 
