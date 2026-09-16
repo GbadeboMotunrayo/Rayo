@@ -118,14 +118,10 @@ class Overlay(Gtk.Window):
 
         self.connect("destroy", Gtk.main_quit)
         self.connect("realize", self._on_realize)
-
-        # insurance: nudge a repaint ~30x/s so CSS animations keep advancing
-        # even though this is an unfocused, kept-below desktop window.
-        GLib.timeout_add(33, self._keep_ticking)
-
-    def _keep_ticking(self):
-        self.web.queue_draw()
-        return True  # keep the timeout alive
+        # NOTE: no manual repaint tick. With WEBKIT_DISABLE_DMABUF_RENDERER set,
+        # WebKit advances CSS animations on its own timer. Forcing a 30fps
+        # queue_draw here was redundant, pegged ~13% CPU, and made the whole
+        # screen hitch periodically.
 
     def _on_realize(self, *_):
         # click-through: give the window an EMPTY input region so every click
