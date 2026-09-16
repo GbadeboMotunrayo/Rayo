@@ -78,19 +78,35 @@ body{
 /* base: a faint full ring for structure; the bright arc lives on 2 adjacent
    sides (a clear ~half-ring glow) with the rest TRANSPARENT so the rotation
    is unmistakable. */
-/* glow restored so the rings actually read (the desktop glitch was the ding
-   extension, not this). Kept moderate (6px) to balance visibility vs cost. */
-.reactor .ring{border:12.5px solid transparent;
-  filter:drop-shadow(0 0 6px rgba(120,210,238,.7))}
-.r1{width:540px;height:540px;border-top-color:var(--ice-bright);border-right-color:var(--ice);
+/* Rings built the SAME way as the ruler (conic-gradient + radial mask) — the
+   border technique didn't render in the WebKitGTK overlay's software mode, but
+   this does. Each ring is a ~12px band showing a bright arc that travels as it
+   spins. No filter/border → also cheap. */
+.reactor .ring{border:none}
+.r1{width:540px;height:540px;
+  background:conic-gradient(from 0deg,var(--ice-bright),var(--ice) 55deg,rgba(120,210,238,.12) 120deg,transparent 165deg);
+  -webkit-mask:radial-gradient(circle,transparent 257px,#000 258px,#000 270px,transparent 271px);
+  mask:radial-gradient(circle,transparent 257px,#000 258px,#000 270px,transparent 271px);
   animation:spin 11s linear infinite}                     /* CW  */
-.r2{width:456px;height:456px;border-bottom-color:var(--ice-bright);border-left-color:var(--ice);
+.r2{width:456px;height:456px;
+  background:conic-gradient(from 0deg,var(--ice-bright),var(--ice) 55deg,rgba(120,210,238,.12) 120deg,transparent 165deg);
+  -webkit-mask:radial-gradient(circle,transparent 215px,#000 216px,#000 228px,transparent 229px);
+  mask:radial-gradient(circle,transparent 215px,#000 216px,#000 228px,transparent 229px);
   animation:spin 9s linear infinite reverse}              /* CCW */
-.r3{width:380px;height:380px;border-left-color:var(--ice-bright);border-top-color:var(--ice);
+.r3{width:380px;height:380px;
+  background:conic-gradient(from 0deg,var(--ice-bright),var(--ice) 55deg,rgba(120,210,238,.12) 120deg,transparent 165deg);
+  -webkit-mask:radial-gradient(circle,transparent 177px,#000 178px,#000 190px,transparent 191px);
+  mask:radial-gradient(circle,transparent 177px,#000 178px,#000 190px,transparent 191px);
   animation:spin 7s linear infinite}                      /* CW  */
-.r4{width:312px;height:312px;border-right-color:var(--ice-bright);border-bottom-color:var(--ice);
+.r4{width:312px;height:312px;
+  background:conic-gradient(from 0deg,var(--ice-bright),var(--ice) 55deg,rgba(120,210,238,.12) 120deg,transparent 165deg);
+  -webkit-mask:radial-gradient(circle,transparent 143px,#000 144px,#000 156px,transparent 157px);
+  mask:radial-gradient(circle,transparent 143px,#000 144px,#000 156px,transparent 157px);
   animation:spin 5.5s linear infinite reverse}            /* CCW */
-.r5{width:246px;height:246px;border-top-color:var(--ice-bright);border-left-color:var(--ice);
+.r5{width:246px;height:246px;
+  background:conic-gradient(from 0deg,var(--ice-bright),var(--ice) 55deg,rgba(120,210,238,.12) 120deg,transparent 165deg);
+  -webkit-mask:radial-gradient(circle,transparent 110px,#000 111px,#000 123px,transparent 124px);
+  mask:radial-gradient(circle,transparent 110px,#000 111px,#000 123px,transparent 124px);
   animation:spin 4s linear infinite}                      /* CW  */
 
 /* the "ruler" — a tick-mark measurement ring, now SPINNING (CCW) */
