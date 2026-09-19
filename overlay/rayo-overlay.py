@@ -92,15 +92,31 @@ class Overlay(Gtk.Window):
         self.set_keep_below(True)
         self.stick()                      # show on all workspaces
         self.set_accept_focus(False)
-        self.set_type_hint(Gdk.WindowTypeHint.DESKTOP)
+        # NOTE: not WindowTypeHint.DESKTOP — the WM pins DESKTOP windows to the
+        # PRIMARY monitor's origin, so the HUD couldn't be placed on the TV.
+        # A normal, undecorated, kept-below, click-through window can live on
+        # any monitor and still acts as a backdrop.
+        self.set_type_hint(Gdk.WindowTypeHint.NORMAL)
         self.set_resizable(False)
 
-        # --- cover the primary monitor ---
+        # --- choose which monitor the HUD lives on ---
+        # Prefer an EXTERNAL screen (the TV) as the ambient backdrop; fall back
+        # to the built-in panel when nothing else is connected. Placement is by
+        # geometry (reliable now that displays are at integer scale 1.0).
         disp = Gdk.Display.get_default()
-        mon = disp.get_primary_monitor() or disp.get_monitor(0)
-        geo = mon.get_geometry()
-        self.move(geo.x, geo.y)
-        self.set_default_size(geo.width, geo.height)
+        target = None
+        for i in range(disp.get_n_monitors()):
+            m = disp.get_monitor(i)
+            if not m.is_primary():
+                target = m
+                break
+        if target is None:
+            target = disp.get_primary_monitor() or disp.get_monitor(0)
+        g = target.get_geometry()
+        self._geo = (g.x, g.y, g.width, g.height)
+        self.move(g.x, g.y)
+        self.set_default_size(g.width, g.height)
+        self.resize(g.width, g.height)
 
         # --- the web view ---
         self.web = WebKit2.WebView()
@@ -118,10 +134,21 @@ class Overlay(Gtk.Window):
 
         self.connect("destroy", Gtk.main_quit)
         self.connect("realize", self._on_realize)
+        self.connect("map", self._place)
         # NOTE: no manual repaint tick. With WEBKIT_DISABLE_DMABUF_RENDERER set,
         # WebKit advances CSS animations on its own timer. Forcing a 30fps
         # queue_draw here was redundant, pegged ~13% CPU, and made the whole
         # screen hitch periodically.
+
+    def _place(self, *_):
+        # Re-assert exact position+size on its monitor (some WMs nudge a new
+        # undecorated window; this pins it to the chosen screen).
+        x, y, w, h = self._geo
+        try:
+            self.move(x, y)
+            self.resize(w, h)
+        except Exception as e:
+            print(f"[rayo] could not place overlay: {e}", file=sys.stderr)
 
     def _on_realize(self, *_):
         # click-through: give the window an EMPTY input region so every click
