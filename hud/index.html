@@ -88,7 +88,11 @@ body{
    Bands 4.5px (25% thinner). A dark drop-shadow gives a 3D raised feel. */
 /* each ring's mask lives in --m so both the ring AND its shadow copy use it
    (no fragile mask:inherit). Directions outer→inner: CCW·CW·CCW·CW·CCW·CW. */
-.reactor .ring{border:none;-webkit-mask:var(--m);mask:var(--m)}
+.reactor .ring{border:none;-webkit-mask:var(--m);mask:var(--m);
+  /* cache each ring as its own layer so the spin just re-composites a cached
+     bitmap instead of re-rasterising the conic-gradient every frame. This is
+     the big CPU saver under software rendering. */
+  will-change:transform;transform:translateZ(0);backface-visibility:hidden}
 /* real 3D shadow: a dark, offset copy of the same ring behind it. (CSS filter
    drop-shadow does NOT render in the WebKitGTK overlay; a masked element does.) */
 .reactor .ring::before{content:"";position:absolute;inset:0;background:rgba(0,0,0,.6);
@@ -131,7 +135,7 @@ body{
 
 /* --- the orb: 3 non-syncing layers (Zorin technique) --- */
 .orb{position:relative;width:150px;height:150px}
-.orb span{position:absolute;border-radius:50%}
+.orb span{position:absolute;border-radius:50%;will-change:transform,opacity;backface-visibility:hidden}
 .orb .core{
   inset:0;
   /* solid, opaque blue disc — the glow lives INSIDE the circle */
@@ -157,7 +161,7 @@ body{
   animation:orbShimmer 5s ease-in-out infinite;   /* glow only, no rotation */
 }
 /* segmented reactor blades ring around the orb — STATIC, only glows */
-.blades{position:absolute;width:210px;height:210px;border-radius:50%;
+.blades{position:absolute;width:210px;height:210px;border-radius:50%;will-change:opacity;
   background:repeating-conic-gradient(from 0deg,
      var(--ice) 0deg 3deg, transparent 3deg 30deg);
   mask:radial-gradient(circle, transparent 78px, #000 80px, #000 98px, transparent 100px);
