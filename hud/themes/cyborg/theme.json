@@ -1,0 +1,16 @@
+{
+  "name": "CYBORG",
+  "character": "Combat chassis",
+  "tokens": {
+    "--ink": "#0a0703", "--ink-2": "#140d04", "--ink-0": "#050301",
+    "--ice": "#ff9d2f", "--ice-bright": "#ffc06a", "--ice-deep": "#7a4a10",
+    "--ice-faint": "#3a2a12", "--ice-hi": "#ffe9c8", "--ice-abyss": "#2a1704",
+    "--ice-rgb": "255 157 47", "--ice-bright-rgb": "255 192 106", "--ice-hi-rgb": "255 233 200",
+    "--gold": "#ffd24a", "--red": "#ff3b30",
+    "--paper": "#f0e2cc", "--muted": "#8a7a5c",
+    "--glass": "rgba(16,11,5,0.84)", "--glass-hi": "rgba(255,255,255,0.06)"
+  },
+  "wordmark": "MG HOLDINGS",
+  "subtitle": "COMBAT CHASSIS · SYSTEMS NOMINAL",
+  "callsign": "C.Y.B.G"
+}

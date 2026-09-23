@@ -24,7 +24,8 @@ Cortana, or their own.
 | Animated HUD front-end (`hud/`) | ✅ working — breathing reactor, glass panels, live gauges, scales to any resolution |
 | System-stats bridge (`overlay/stats.py`) | ✅ working — pure stdlib, reads `/proc` + `/sys`, writes `hud/stats.json` |
 | Desktop overlay window (transparent, click-through, always-below) | ✅ working — `start.sh` mounts the HUD on the desktop |
-| Theme system + more themes | 🔜 in progress (RAYO ships first) |
+| Theme system + 4 themes | ✅ working — RAYO, Cyberpunk, Cyborg, Tron; switch live from the hub |
+| Interactive control hub | ✅ working — click the reactor for a radial menu / power controls |
 | One-command installer | 🔜 |
 
 ## Quickstart (clone & run)
@@ -116,6 +117,26 @@ recipe were studied from [JashanMaan28/Zorin](https://github.com/JashanMaan28/Zo
 (MIT). Arc-reactor / HUD composition is original. Iron Man, JARVIS, FRIDAY and
 related names are trademarks of their owners — Rayo ships no copyrighted
 artwork; themes are original interpretations.
+
+## Themes
+
+A theme is just `hud/themes/<name>/theme.json` — a palette (CSS-variable
+values) plus wordmark/subtitle/callsign text. Every colour in the HUD resolves
+from those tokens, so a new theme is a single JSON file. Four ship today:
+
+| Theme | Vibe |
+|-------|------|
+| **RAYO** | Iron Man — ice-blue + gold arc reactor |
+| **Cyberpunk** | Night-city neon — magenta + electric yellow |
+| **Cyborg** | Combat chassis — amber/orange machine HUD |
+| **Tron** | The Grid — electric cyan on black + orange |
+
+**Switch live:** click the reactor hub → **THEME** (cycles through them); your
+choice is remembered. Or load a specific one with `?theme=tron`.
+
+**Make your own:** copy a folder in `hud/themes/`, edit the token values, add
+your `name` to the list in `hud/core/theme.js`. PRs for new hero themes
+(Batman, Halo/Cortana, Samus…) welcome.
 
 ## Support / Donate
 

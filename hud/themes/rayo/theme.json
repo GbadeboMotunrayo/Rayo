@@ -2,11 +2,13 @@
   "name": "RAYO",
   "character": "Iron Man",
   "tokens": {
-    "--ink": "#06080b", "--ink-2": "#0a0e13",
-    "--ice": "#78d2ee", "--ice-bright": "#a6ecff",
-    "--ice-deep": "#1f6f86", "--ice-faint": "#2a4a58",
+    "--ink": "#06080b", "--ink-2": "#0a0e13", "--ink-0": "#04060a",
+    "--ice": "#78d2ee", "--ice-bright": "#a6ecff", "--ice-deep": "#1f6f86",
+    "--ice-faint": "#2a4a58", "--ice-hi": "#e9f9ff", "--ice-abyss": "#0c3b49",
+    "--ice-rgb": "120 210 238", "--ice-bright-rgb": "166 236 255", "--ice-hi-rgb": "233 249 255",
     "--gold": "#c9a24b", "--red": "#e5484d",
-    "--paper": "#d0e0e8", "--muted": "#60717f"
+    "--paper": "#d0e0e8", "--muted": "#60717f",
+    "--glass": "rgba(10,16,22,0.80)", "--glass-hi": "rgba(255,255,255,0.06)"
   },
   "wordmark": "MG HOLDINGS",
   "subtitle": "CLASS-R · SYSTEMS INTERFACE",

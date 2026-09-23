@@ -13,21 +13,31 @@
    ============================================================ */
 
 :root{
-  /* ---- theme tokens (a theme = just this block + assets) ---- */
-  --ink:        #06080b;
-  --ink-2:      #0a0e13;
-  --ice:        #78d2ee;
-  --ice-bright: #a6ecff;
-  --ice-deep:   #1f6f86;
-  --ice-faint:  #2a4a58;
-  --gold:       #c9a24b;
-  --red:        #e5484d;
-  --paper:      #d0e0e8;
-  --muted:      #60717f;
+  /* ---- theme tokens (RAYO defaults; core/theme.js overrides these live) ----
+     Every colour in the HUD resolves from these, so a theme = just this set of
+     values (see hud/themes/<name>/theme.json). The *-rgb tokens are the same
+     hero colours as bare "R G B" triples so we can build any translucency with
+     rgb(var(--x-rgb) / <alpha>) instead of hard-coding rgba() literals. */
+  --ink:        #06080b;   /* deepest backdrop            */
+  --ink-2:      #0a0e13;   /* backdrop mid                */
+  --ink-0:      #04060a;   /* backdrop edge (darkest)     */
+  --ice:        #78d2ee;   /* HERO colour                 */
+  --ice-bright: #a6ecff;   /* hero, brighter              */
+  --ice-deep:   #1f6f86;   /* hero, deep (bar gradients)  */
+  --ice-faint:  #2a4a58;   /* hero, desaturated           */
+  --ice-hi:     #e9f9ff;   /* near-white core highlight   */
+  --ice-abyss:  #0c3b49;   /* dark core base              */
+  --ice-rgb:        120 210 238;   /* --ice as R G B      */
+  --ice-bright-rgb: 166 236 255;   /* --ice-bright as RGB */
+  --ice-hi-rgb:     233 249 255;   /* highlight as RGB    */
+  --gold:       #c9a24b;   /* charging / accent           */
+  --red:        #e5484d;   /* alerts / danger             */
+  --paper:      #d0e0e8;   /* primary text                */
+  --muted:      #60717f;   /* secondary text              */
 
-  --glass:      rgba(10,16,22,0.80);   /* solid-ish (no live blur) — cheap */
-  --glass-brd:  rgba(120,210,238,0.24);
-  --glass-hi:   rgba(255,255,255,0.06);
+  --glass:      rgba(10,16,22,0.80);        /* panel fill (solid — no blur) */
+  --glass-brd:  rgb(var(--ice-rgb) / .24);  /* panel border                 */
+  --glass-hi:   rgba(255,255,255,0.06);     /* top highlight (theme-neutral) */
 
   --font-ui:    'Inter','Segoe UI',system-ui,sans-serif;
   --font-mono:  'JetBrains Mono','SF Mono',ui-monospace,monospace;
@@ -40,7 +50,7 @@ body{
   color:var(--paper);
   /* preview backdrop — the real overlay is transparent over your desktop */
   background:
-    radial-gradient(120% 90% at 50% 46%, #0d141b 0%, var(--ink) 62%, #04060a 100%);
+    radial-gradient(120% 90% at 50% 46%, var(--ink-2) 0%, var(--ink) 62%, var(--ink-0) 100%);
   -webkit-font-smoothing:antialiased;
   user-select:none;
 }
@@ -50,8 +60,8 @@ body{
 .atmos::before{
   content:"";position:absolute;inset:0;
   background-image:
-    linear-gradient(rgba(42,74,88,.05) 1px,transparent 1px),
-    linear-gradient(90deg,rgba(42,74,88,.05) 1px,transparent 1px);
+    linear-gradient(rgb(var(--ice-rgb) / .05) 1px,transparent 1px),
+    linear-gradient(90deg,rgb(var(--ice-rgb) / .05) 1px,transparent 1px);
   background-size:46px 46px;
   mask:radial-gradient(120% 90% at 50% 46%,#000 40%,transparent 92%);
 }
@@ -99,35 +109,35 @@ body{
   -webkit-mask:var(--m);mask:var(--m);transform:translate(2px,3px);z-index:-1}
 .r1{--m:radial-gradient(circle,transparent 265px,#000 265.5px,#000 270px,transparent 271px);
   width:540px;height:540px;
-  background:conic-gradient(from 0deg,var(--ice-bright),var(--ice) 55deg,rgba(120,210,238,.12) 120deg,transparent 165deg);
+  background:conic-gradient(from 0deg,var(--ice-bright),var(--ice) 55deg,rgb(var(--ice-rgb) / .12) 120deg,transparent 165deg);
   animation:spin 14s steps(280) infinite reverse}
 .r2{--m:radial-gradient(circle,transparent 223px,#000 223.5px,#000 228px,transparent 229px);
   width:456px;height:456px;
-  background:conic-gradient(from 180deg,var(--ice-bright),var(--ice) 55deg,rgba(120,210,238,.12) 120deg,transparent 165deg);
+  background:conic-gradient(from 180deg,var(--ice-bright),var(--ice) 55deg,rgb(var(--ice-rgb) / .12) 120deg,transparent 165deg);
   animation:spin 12s steps(240) infinite}
 .r3{--m:radial-gradient(circle,transparent 185px,#000 185.5px,#000 190px,transparent 191px);
   width:380px;height:380px;
-  background:conic-gradient(from 240deg,var(--ice-bright),var(--ice) 55deg,rgba(120,210,238,.12) 120deg,transparent 165deg);
+  background:conic-gradient(from 240deg,var(--ice-bright),var(--ice) 55deg,rgb(var(--ice-rgb) / .12) 120deg,transparent 165deg);
   animation:spin 10s steps(200) infinite}
 .r4{--m:radial-gradient(circle,transparent 151px,#000 151.5px,#000 156px,transparent 157px);
   width:312px;height:312px;
-  background:conic-gradient(from 120deg,var(--ice-bright),var(--ice) 55deg,rgba(120,210,238,.12) 120deg,transparent 165deg);
+  background:conic-gradient(from 120deg,var(--ice-bright),var(--ice) 55deg,rgb(var(--ice-rgb) / .12) 120deg,transparent 165deg);
   animation:spin 8s steps(180) infinite reverse}
 .r5{--m:radial-gradient(circle,transparent 118px,#000 118.5px,#000 123px,transparent 124px);
   width:246px;height:246px;
-  background:conic-gradient(from 300deg,var(--ice-bright),var(--ice) 55deg,rgba(120,210,238,.12) 120deg,transparent 165deg);
+  background:conic-gradient(from 300deg,var(--ice-bright),var(--ice) 55deg,rgb(var(--ice-rgb) / .12) 120deg,transparent 165deg);
   animation:spin 6s steps(160) infinite}
 
 /* the "ruler" — tick-mark ring · spinning CCW */
 .ruler{--m:radial-gradient(circle, transparent 197px, #000 198px, #000 207px, transparent 208px);
   width:414px;height:414px;border:none!important;
-  background:repeating-conic-gradient(rgba(166,236,255,.6) 0deg 0.4deg, transparent 0.4deg 5deg);
+  background:repeating-conic-gradient(rgb(var(--ice-bright-rgb) / .6) 0deg 0.4deg, transparent 0.4deg 5deg);
   animation:spin 40s steps(360) infinite reverse}
 
 @keyframes spin{to{transform:rotate(360deg)}}
 
 /* cardinal labels */
-.cardinal{position:absolute;font-family:var(--font-mono);font-size:11px;color:rgba(120,210,238,.6);letter-spacing:1px}
+.cardinal{position:absolute;font-family:var(--font-mono);font-size:11px;color:rgb(var(--ice-rgb) / .6);letter-spacing:1px}
 .cardinal.n{top:26px;left:50%;transform:translateX(-50%)}
 .cardinal.s{bottom:26px;left:50%;transform:translateX(-50%)}
 .cardinal.e{right:22px;top:50%;transform:translateY(-50%)}
@@ -140,24 +150,24 @@ body{
   inset:0;
   /* solid, opaque blue disc — the glow lives INSIDE the circle */
   background:radial-gradient(circle at 34% 30%,
-    #e9f9ff 0%, var(--ice-bright) 22%, var(--ice) 52%, var(--ice-deep) 84%, #0c3b49 100%);
+    var(--ice-hi) 0%, var(--ice-bright) 22%, var(--ice) 52%, var(--ice-deep) 84%, var(--ice-abyss) 100%);
   box-shadow:
     inset 0 0 46px rgba(255,255,255,.28),   /* internal luminosity */
-    inset 0 0 20px rgba(233,249,255,.35),
-    0 0 14px rgba(120,210,238,.4);          /* tight edge glow only — no far bloom */
+    inset 0 0 20px rgb(var(--ice-hi-rgb) / .35),
+    0 0 14px rgb(var(--ice-rgb) / .4);          /* tight edge glow only — no far bloom */
   animation:orbPulse 3s ease-in-out infinite;
 }
 .orb .glow{
   inset:8%;
   background:radial-gradient(circle at 42% 40%,
-    rgba(200,244,255,.55) 0%, rgba(120,210,238,.32) 50%, transparent 100%);
-  box-shadow:inset 0 0 26px rgba(200,244,255,.25);   /* contained — no outer bloom */
+    rgb(var(--ice-hi-rgb) / .55) 0%, rgb(var(--ice-rgb) / .32) 50%, transparent 100%);
+  box-shadow:inset 0 0 26px rgb(var(--ice-hi-rgb) / .25);   /* contained — no outer bloom */
   animation:orbGlow 4s ease-in-out infinite reverse;
 }
 .orb .hi{
   inset:20%;
   background:radial-gradient(circle at 60% 30%,
-    rgba(255,255,255,.55) 0%, rgba(120,210,238,.2) 42%, transparent 72%);
+    rgba(255,255,255,.55) 0%, rgb(var(--ice-rgb) / .2) 42%, transparent 72%);
   animation:orbShimmer 5s ease-in-out infinite;   /* glow only, no rotation */
 }
 /* segmented reactor blades ring around the orb — STATIC, only glows */
@@ -182,7 +192,7 @@ body{
 @keyframes bladePulse{0%,100%{opacity:.55}50%{opacity:1}}
 
 /* crosshair ticks */
-.tick{position:absolute;background:rgba(120,210,238,.5)}
+.tick{position:absolute;background:rgb(var(--ice-rgb) / .5)}
 .tick.t{width:2px;height:22px;top:-46px;left:50%;transform:translateX(-50%)}
 .tick.l{height:2px;width:22px;left:-46px;top:50%;transform:translateY(-50%)}
 .tick.r{height:2px;width:22px;right:-46px;top:50%;transform:translateY(-50%)}
@@ -218,10 +228,10 @@ body{
 .stat .val{font-family:var(--font-mono);font-size:15px;font-weight:600;color:var(--paper)}
 .stat .val .u{font-size:10px;color:var(--muted);margin-left:2px}
 .stat .aux{font-size:10px;color:var(--muted);font-family:var(--font-mono)}
-.bar{height:5px;border-radius:3px;background:rgba(120,210,238,.10);overflow:hidden;position:relative}
+.bar{height:5px;border-radius:3px;background:rgb(var(--ice-rgb) / .10);overflow:hidden;position:relative}
 .bar>i{position:absolute;inset:0;width:0%;border-radius:3px;
   background:linear-gradient(90deg,var(--ice-deep),var(--ice));
-  box-shadow:0 0 10px rgba(120,210,238,.5);
+  box-shadow:0 0 10px rgb(var(--ice-rgb) / .5);
   transition:width 1.1s cubic-bezier(.2,.7,.2,1)}
 
 /* charging state — power card warms to gold */
@@ -247,18 +257,18 @@ body{
 .tele-row .v.ice{color:var(--ice)}
 .tele-sec{font-size:10px;font-weight:700;letter-spacing:2px;color:var(--muted);margin:16px 0 4px}
 .tele-sec:first-child{margin-top:2px}
-.mini-bar{height:4px;border-radius:2px;background:rgba(120,210,238,.10);overflow:hidden;margin-top:5px}
+.mini-bar{height:4px;border-radius:2px;background:rgb(var(--ice-rgb) / .10);overflow:hidden;margin-top:5px}
 .mini-bar>i{display:block;height:100%;width:0%;background:linear-gradient(90deg,var(--ice-deep),var(--ice));
-  box-shadow:0 0 8px rgba(120,210,238,.5);transition:width 1.1s cubic-bezier(.2,.7,.2,1)}
+  box-shadow:0 0 8px rgb(var(--ice-rgb) / .5);transition:width 1.1s cubic-bezier(.2,.7,.2,1)}
 
 /* fan speedometer */
 .gauge-wrap{display:flex;justify-content:center;margin-top:8px}
 #fan-gauge{width:184px;height:184px;overflow:visible}
-#fan-gauge .g-track{fill:none;stroke:rgba(120,210,238,.13);stroke-linecap:round}
+#fan-gauge .g-track{fill:none;stroke:rgb(var(--ice-rgb) / .13);stroke-linecap:round}
 #fan-gauge .g-fill{fill:none;stroke-linecap:round;
   transition:stroke .5s linear}
-#fan-gauge .g-tick{stroke:rgba(166,236,255,.35)}
-#fan-gauge .g-tick.maj{stroke:rgba(166,236,255,.7)}
+#fan-gauge .g-tick{stroke:rgb(var(--ice-bright-rgb) / .35)}
+#fan-gauge .g-tick.maj{stroke:rgb(var(--ice-bright-rgb) / .7)}
 #fan-gauge .g-needle{stroke:var(--ice-bright);stroke-linecap:round;
   transition:stroke .5s linear}
 #fan-gauge .g-hub{fill:var(--ice-bright)}
@@ -272,7 +282,7 @@ body{
 
 /* corner registration marks */
 .reg{position:absolute;width:38px;height:38px;pointer-events:none;z-index:2}
-.reg::before,.reg::after{content:"";position:absolute;background:rgba(120,210,238,.55)}
+.reg::before,.reg::after{content:"";position:absolute;background:rgb(var(--ice-rgb) / .55)}
 .reg::before{width:100%;height:1px}.reg::after{height:100%;width:1px}
 .reg .p{position:absolute;width:4px;height:4px;border-radius:50%;background:var(--ice);box-shadow:0 0 6px var(--ice)}
 .reg.tl{top:40px;left:40px}.reg.tr{top:40px;right:40px}
@@ -302,7 +312,7 @@ body{
 .hub-hit{position:absolute;left:50%;top:50%;width:150px;height:150px;
   transform:translate(-50%,-50%);border-radius:50%;cursor:pointer;z-index:6;
   pointer-events:auto}
-.hub-hit:hover{box-shadow:0 0 0 2px rgba(166,236,255,.25) inset}
+.hub-hit:hover{box-shadow:0 0 0 2px rgb(var(--ice-bright-rgb) / .25) inset}
 
 /* radial menu — items bloom out from the centre to 12 points */
 .hubmenu{position:absolute;left:50%;top:50%;width:0;height:0;z-index:20;
@@ -323,7 +333,7 @@ body{
 .hubmenu.open .hm-item:hover{
   transform:translate(calc(-50% + var(--x)),calc(-50% + var(--y))) scale(1.28);
   border-color:var(--ice);color:var(--ice-bright);
-  background:rgba(18,30,40,.96);box-shadow:0 10px 30px rgba(0,0,0,.6),0 0 18px rgba(120,210,238,.35)}
+  background:rgba(18,30,40,.96);box-shadow:0 10px 30px rgba(0,0,0,.6),0 0 18px rgb(var(--ice-rgb) / .35)}
 .hm-item.danger:hover{border-color:var(--red);color:#ff9a9d;
   box-shadow:0 10px 30px rgba(0,0,0,.6),0 0 18px rgba(229,72,77,.4)}
 
@@ -336,11 +346,11 @@ body{
 .powerbar.open{opacity:1;pointer-events:auto;transform:translate(-50%,-50%) scale(1)}
 .powerbar button{display:flex;flex-direction:column;align-items:center;gap:5px;
   min-width:84px;padding:12px 10px;border:1px solid transparent;border-radius:12px;
-  background:rgba(120,210,238,.06);color:var(--paper);cursor:pointer;
+  background:rgb(var(--ice-rgb) / .06);color:var(--paper);cursor:pointer;
   font-family:var(--font-mono);font-size:20px;line-height:1;transition:all .18s}
 .powerbar button span{font-size:9px;letter-spacing:1.5px;color:var(--muted)}
-.powerbar button:hover{background:rgba(120,210,238,.14);border-color:var(--ice);
-  box-shadow:0 0 16px rgba(120,210,238,.3)}
+.powerbar button:hover{background:rgb(var(--ice-rgb) / .14);border-color:var(--ice);
+  box-shadow:0 0 16px rgb(var(--ice-rgb) / .3)}
 .powerbar button:hover span{color:var(--ice)}
 .powerbar button.danger:hover{background:rgba(229,72,77,.14);border-color:var(--red);
   box-shadow:0 0 16px rgba(229,72,77,.35)}
@@ -356,10 +366,10 @@ body{
   text-shadow:0 0 40px rgba(229,72,77,.5);line-height:1}
 .cd-msg{font-family:var(--font-mono);font-size:16px;letter-spacing:6px;color:var(--paper)}
 .cd-cancel{margin-top:10px;padding:12px 28px;border:1px solid var(--ice);
-  background:rgba(120,210,238,.1);color:var(--ice-bright);border-radius:12px;
+  background:rgb(var(--ice-rgb) / .1);color:var(--ice-bright);border-radius:12px;
   font-family:var(--font-mono);font-size:13px;letter-spacing:2px;cursor:pointer;
   transition:all .18s}
-.cd-cancel:hover{background:rgba(120,210,238,.22);box-shadow:0 0 20px rgba(120,210,238,.4)}
+.cd-cancel:hover{background:rgb(var(--ice-rgb) / .22);box-shadow:0 0 20px rgb(var(--ice-rgb) / .4)}
 
 @media (prefers-reduced-motion:reduce){
   *{animation-duration:.001ms!important;animation-iteration-count:1!important}
@@ -511,6 +521,7 @@ if (new URLSearchParams(location.search).get('obsSafe') === '1') {
   </div>
 </div>
 
+<script src="core/theme.js"></script>
 <script src="core/hud.js"></script>
 <script src="core/control.js"></script>
 </body>

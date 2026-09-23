@@ -37,7 +37,7 @@
     { label: 'SLEEP',    act: 'suspend' },
     { label: 'RESTART',  act: 'reboot' },
     { label: 'SHUTDOWN', act: 'poweroff', danger: true },
-    { label: 'CLOSE',    act: 'close' },
+    { label: 'THEME',    act: 'theme' },
   ];
   const RADIUS = 250;                       // px from hub centre (design space)
   const menu = $('hubmenu');
@@ -65,6 +65,9 @@
   const closeAll   = () => { closeMenu(); closePower(); };
 
   function doAction(act) {
+    // THEME cycles the look in-page and keeps the menu open so you can keep
+    // tapping to preview each theme.
+    if (act === 'theme') { if (window.RayoTheme) window.RayoTheme.cycle(); return; }
     closeAll();
     if (act === 'close') return;
     if (act === 'poweroff') { startCountdown(); return; }

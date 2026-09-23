@@ -71,11 +71,18 @@ class _QuietHandler(http.server.SimpleHTTPRequestHandler):
 
 
 def start_http_server():
-    """Serve hud/ over loopback http so the page can fetch() stats.json.
-    (Browsers block fetch() of file:// URLs, which is why file:// showed only
-    mock data.) Returns (server, port)."""
+    """Serve hud/ over loopback http so the page can fetch() stats.json + theme
+    files. Prefer a FIXED port so the page's origin is stable — that lets the
+    chosen theme (saved in localStorage) survive overlay restarts. Fall back to
+    a random free port if the fixed one is busy. Returns (server, port)."""
     handler = functools.partial(_QuietHandler, directory=HUD_DIR)
-    srv = http.server.ThreadingHTTPServer(("127.0.0.1", 0), handler)  # 0 = free port
+    srv = None
+    for port in (8791, 0):
+        try:
+            srv = http.server.ThreadingHTTPServer(("127.0.0.1", port), handler)
+            break
+        except OSError:
+            continue
     threading.Thread(target=srv.serve_forever, daemon=True).start()
     return srv, srv.server_address[1]
 

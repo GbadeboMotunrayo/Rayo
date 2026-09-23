@@ -1,0 +1,16 @@
+{
+  "name": "TRON",
+  "character": "The Grid",
+  "tokens": {
+    "--ink": "#000305", "--ink-2": "#02090e", "--ink-0": "#000103",
+    "--ice": "#35e0ff", "--ice-bright": "#9bf3ff", "--ice-deep": "#0e6b82",
+    "--ice-faint": "#123842", "--ice-hi": "#e6ffff", "--ice-abyss": "#031820",
+    "--ice-rgb": "53 224 255", "--ice-bright-rgb": "155 243 255", "--ice-hi-rgb": "230 255 255",
+    "--gold": "#ff7a18", "--red": "#ff3b3b",
+    "--paper": "#cfeef7", "--muted": "#5a7a86",
+    "--glass": "rgba(2,10,14,0.82)", "--glass-hi": "rgba(255,255,255,0.08)"
+  },
+  "wordmark": "MG HOLDINGS",
+  "subtitle": "THE GRID · I/O TOWER LINK",
+  "callsign": "T.R.O.N"
+}
