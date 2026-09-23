@@ -251,6 +251,26 @@ body{
 .mini-bar>i{display:block;height:100%;width:0%;background:linear-gradient(90deg,var(--ice-deep),var(--ice));
   box-shadow:0 0 8px rgba(120,210,238,.5);transition:width 1.1s cubic-bezier(.2,.7,.2,1)}
 
+/* fan speedometer */
+.gauge-wrap{display:flex;justify-content:center;margin-top:8px}
+#fan-gauge{width:184px;height:184px;overflow:visible}
+#fan-gauge .g-track{fill:none;stroke:rgba(120,210,238,.13);stroke-linecap:round}
+#fan-gauge .g-fill{fill:none;stroke-linecap:round;
+  transition:stroke .5s linear}
+#fan-gauge .g-tick{stroke:rgba(166,236,255,.35)}
+#fan-gauge .g-tick.maj{stroke:rgba(166,236,255,.7)}
+#fan-gauge .g-needle{stroke:var(--ice-bright);stroke-linecap:round;
+  transition:transform .9s cubic-bezier(.2,.7,.2,1),stroke .5s linear;
+  transform-box:view-box;transform-origin:100px 100px}
+#fan-gauge .g-hub{fill:var(--ice-bright)}
+#fan-gauge .g-hub-in{fill:#06080b}
+#fan-gauge .g-val{fill:var(--paper);font-family:var(--font-mono);font-weight:700;
+  font-size:34px;text-anchor:middle}
+#fan-gauge .g-unit{fill:var(--muted);font-family:var(--font-mono);font-weight:600;
+  font-size:12px;letter-spacing:2px;text-anchor:middle}
+#fan-gauge .g-lbl{fill:var(--muted);font-family:var(--font-mono);font-weight:600;
+  font-size:10px;letter-spacing:2px;text-anchor:middle}
+
 /* corner registration marks */
 .reg{position:absolute;width:38px;height:38px;pointer-events:none;z-index:2}
 .reg::before,.reg::after{content:"";position:absolute;background:rgba(120,210,238,.55)}
@@ -378,6 +398,14 @@ if (new URLSearchParams(location.search).get('obsSafe') === '1') {
     <div class="tele-row"><span class="k">UP</span><span class="v ice" id="t-up">—</span></div>
     <div class="tele-sec">UPTIME</div>
     <div class="tele-row"><span class="k">SINCE BOOT</span><span class="v" id="t-up2">—</span></div>
+
+    <div class="tele-sec">COOLING</div>
+    <!-- fan speedometer (concept ported from Carpadi SpeedGauge): 270° sweep,
+         needle + ticks, live RPM in the open gap. Colour shifts ice→gold→red
+         as the fan spins up so a glance tells you something's overworking it. -->
+    <div class="gauge-wrap">
+      <svg id="fan-gauge" viewBox="0 0 200 200" aria-label="fan speed"></svg>
+    </div>
   </div>
 
   <!-- CHROME -->

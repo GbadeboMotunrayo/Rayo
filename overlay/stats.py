@@ -124,6 +124,30 @@ def battery_info():
     return p, charging, status, minutes
 
 
+# ---- fan (tacho RPM) --------------------------------------------------------
+def fan_info():
+    """Return (rpm, max_rpm, label). Scans every hwmon for a fan tacho. On this
+    Dell the fan shows up under both dell_ddv (has the 'CPU Fan' label) and
+    dell_smm (has fan1_max), so we merge: highest RPM seen, any max, any label."""
+    rpm = mx = 0
+    lbl = ""
+    for h in sorted(glob.glob("/sys/class/hwmon/hwmon*")):
+        for f in sorted(glob.glob(os.path.join(h, "fan*_input"))):
+            v = read(f)
+            if not v.isdigit():
+                continue
+            rpm = max(rpm, int(v))
+            m = read(f.replace("_input", "_max"))
+            if m.isdigit():
+                mx = max(mx, int(m))
+            l = read(f.replace("_input", "_label"))
+            if l and not lbl:
+                lbl = l
+    if not mx:
+        mx = 8100          # sensible XPS-9315 default so the gauge still scales
+    return rpm, mx, (lbl or "FAN")
+
+
 # ---- network (throughput + wifi) -------------------------------------------
 _prev_net = None
 def net_info():
@@ -202,12 +226,14 @@ def sample():
     disk_p, disk_u, disk_t = disk_info()
     batt, charging, batt_status, batt_min = battery_info()
     down, up, signal, ssid, iface = net_info()
+    fan_rpm, fan_max, fan_label = fan_info()
     return {
         "cpu": round(cpu, 1), "freq": cpu_freq_ghz(),
         "mem": mem_p, "mem_used": mem_u, "mem_total": mem_t,
         "disk": disk_p, "disk_used": disk_u, "disk_total": disk_t,
         "battery": batt, "charging": charging,
         "batt_status": batt_status, "batt_min": batt_min,
+        "fan": fan_rpm, "fan_max": fan_max, "fan_label": fan_label,
         "down": down, "up": up, "signal": signal,
         "ssid": ssid or iface or "—", "iface": iface,
         "boot": boot_ms(), "ts": int(time.time() * 1000),

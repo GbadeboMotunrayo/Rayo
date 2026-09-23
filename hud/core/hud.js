@@ -21,6 +21,74 @@
   window.addEventListener('resize', fitScale);
   fitScale();
 
+  // ---- fan speedometer (geometry ported from Carpadi SpeedGauge) -----------
+  // A 270° arc with a 90° gap at the bottom, tick marks, and a sweeping needle;
+  // the live RPM sits in the open gap. Static parts are drawn once; each second
+  // we move the fill arc + needle and recolour by how hard the fan is working
+  // (calm ice → gold → red) so a glance tells you something's overworking it.
+  const G = { START: -135, SWEEP: 270, cx: 100, cy: 100, r: 78, stroke: 12 };
+  const SVGNS = 'http://www.w3.org/2000/svg';
+  const polar = (cx, cy, r, ang) => {
+    const a = (ang - 90) * Math.PI / 180;
+    return { x: cx + r * Math.cos(a), y: cy + r * Math.sin(a) };
+  };
+  const arcPath = (cx, cy, r, a0, a1) => {
+    const s = polar(cx, cy, r, a0), e = polar(cx, cy, r, a1);
+    const large = (a1 - a0) > 180 ? 1 : 0;
+    return `M ${s.x.toFixed(2)} ${s.y.toFixed(2)} A ${r} ${r} 0 ${large} 1 ${e.x.toFixed(2)} ${e.y.toFixed(2)}`;
+  };
+  const svgEl = (name, attrs) => {
+    const el = document.createElementNS(SVGNS, name);
+    for (const k in attrs) el.setAttribute(k, attrs[k]);
+    return el;
+  };
+  const fanColor = (f) => f >= 0.85 ? 'var(--red)' : f >= 0.6 ? 'var(--gold)' : 'var(--ice)';
+  let gauge = null;
+  function buildGauge() {
+    const svg = $('fan-gauge');
+    if (!svg || gauge) return;
+    const { START, SWEEP, cx, cy, r, stroke } = G;
+    svg.appendChild(svgEl('path', { class: 'g-track', 'stroke-width': stroke,
+      d: arcPath(cx, cy, r, START, START + SWEEP) }));
+    const fill = svgEl('path', { class: 'g-fill', 'stroke-width': stroke,
+      d: arcPath(cx, cy, r, START, START + 0.001), stroke: 'var(--ice)' });
+    svg.appendChild(fill);
+    for (let i = 0; i <= 10; i++) {
+      const ang = START + (i / 10) * SWEEP;
+      const o = polar(cx, cy, r + 4, ang), inn = polar(cx, cy, r - stroke - 4, ang);
+      svg.appendChild(svgEl('line', { class: 'g-tick' + (i % 5 === 0 ? ' maj' : ''),
+        x1: o.x.toFixed(2), y1: o.y.toFixed(2), x2: inn.x.toFixed(2), y2: inn.y.toFixed(2),
+        'stroke-width': i % 5 === 0 ? 2 : 1 }));
+    }
+    // needle drawn pointing straight up from the hub, then rotated into place
+    const needle = svgEl('line', { class: 'g-needle', x1: cx, y1: cy,
+      x2: cx, y2: (cy - (r - stroke - 6)).toFixed(2), 'stroke-width': 3.5,
+      transform: `rotate(${START + 90} ${cx} ${cy})`, stroke: 'var(--ice)' });
+    svg.appendChild(needle);
+    svg.appendChild(svgEl('circle', { class: 'g-hub', cx, cy, r: 9 }));
+    svg.appendChild(svgEl('circle', { class: 'g-hub-in', cx, cy, r: 4 }));
+    const val = svgEl('text', { class: 'g-val', x: cx, y: 150 }); val.textContent = '—';
+    const unit = svgEl('text', { class: 'g-unit', x: cx, y: 168 }); unit.textContent = 'RPM';
+    const lbl = svgEl('text', { class: 'g-lbl', x: cx, y: 190 }); lbl.textContent = 'CPU FAN';
+    svg.append(val, unit, lbl);
+    gauge = { fill, needle, val, lbl };
+  }
+  function updateGauge(rpm, maxRpm, label) {
+    if (!gauge) return;
+    const mx = maxRpm > 0 ? maxRpm : 8100;
+    const frac = clamp(rpm / mx, 0, 1);
+    const { START, SWEEP, cx, cy, r } = G;
+    const ang = START + frac * SWEEP;
+    const col = fanColor(frac);
+    gauge.fill.setAttribute('d', arcPath(cx, cy, r, START, Math.max(START + 0.001, ang)));
+    gauge.fill.setAttribute('stroke', col);
+    gauge.needle.setAttribute('transform', `rotate(${(ang + 90).toFixed(1)} ${cx} ${cy})`);
+    gauge.needle.setAttribute('stroke', col);
+    gauge.val.textContent = Math.round(rpm || 0);
+    if (label) gauge.lbl.textContent = String(label).toUpperCase();
+  }
+  buildGauge();
+
   // Values are set directly once per second; the progress bars glide via their
   // CSS `transition: width` (see stylesheet). We deliberately do NOT re-paint
   // every frame — doing so kept restarting the CSS transition and made the
@@ -50,6 +118,8 @@
         signal: this.sig, ssid: this.ssid, freq: this.freq,
         mem_used: '4.6', mem_total: '6.9', disk_used: '124', disk_total: '233',
         down: this.down, up: this.up, boot: this.boot, mock: true,
+        // fan tracks cpu load: idle ~2500, busy → toward 8100
+        fan: Math.round(2400 + this.cpu / 100 * 5200), fan_max: 8100, fan_label: 'CPU FAN',
         wx_temp: '+27°C', wx_cond: 'Partly cloudy', wx_loc: 'Lagos', wx_feels: '+30°C'
       };
     }
@@ -146,6 +216,9 @@
     $('t-down').textContent = fmtRate(ease('down', d.down, 0.25));
     $('t-up').textContent = fmtRate(ease('up', d.up, 0.25));
     $('t-up2').textContent = fmtUptime(d.boot);
+
+    // fan speedometer
+    updateGauge(d.fan, d.fan_max, d.fan_label);
 
     // honest data-source badge:
     //   LIVE  — real bridge, fresh (<5s old)
