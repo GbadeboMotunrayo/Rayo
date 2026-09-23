@@ -60,10 +60,12 @@
         x1: o.x.toFixed(2), y1: o.y.toFixed(2), x2: inn.x.toFixed(2), y2: inn.y.toFixed(2),
         'stroke-width': i % 5 === 0 ? 2 : 1 }));
     }
-    // needle drawn pointing straight up from the hub, then rotated into place
+    // needle: a line from the hub to a tip computed directly with polar() — no
+    // CSS transform (WebKitGTK mis-pivots transform-origin on SVG and flings it
+    // off-screen). At rest it points to the start of the sweep.
+    const t0 = polar(cx, cy, r - stroke - 6, START);
     const needle = svgEl('line', { class: 'g-needle', x1: cx, y1: cy,
-      x2: cx, y2: (cy - (r - stroke - 6)).toFixed(2), 'stroke-width': 3.5,
-      transform: `rotate(${START + 90} ${cx} ${cy})`, stroke: 'var(--ice)' });
+      x2: t0.x.toFixed(2), y2: t0.y.toFixed(2), 'stroke-width': 3.5, stroke: 'var(--ice)' });
     svg.appendChild(needle);
     svg.appendChild(svgEl('circle', { class: 'g-hub', cx, cy, r: 9 }));
     svg.appendChild(svgEl('circle', { class: 'g-hub-in', cx, cy, r: 4 }));
@@ -77,12 +79,14 @@
     if (!gauge) return;
     const mx = maxRpm > 0 ? maxRpm : 8100;
     const frac = clamp(rpm / mx, 0, 1);
-    const { START, SWEEP, cx, cy, r } = G;
+    const { START, SWEEP, cx, cy, r, stroke } = G;
     const ang = START + frac * SWEEP;
     const col = fanColor(frac);
     gauge.fill.setAttribute('d', arcPath(cx, cy, r, START, Math.max(START + 0.001, ang)));
     gauge.fill.setAttribute('stroke', col);
-    gauge.needle.setAttribute('transform', `rotate(${(ang + 90).toFixed(1)} ${cx} ${cy})`);
+    const tip = polar(cx, cy, r - stroke - 6, ang);
+    gauge.needle.setAttribute('x2', tip.x.toFixed(2));
+    gauge.needle.setAttribute('y2', tip.y.toFixed(2));
     gauge.needle.setAttribute('stroke', col);
     gauge.val.textContent = Math.round(rpm || 0);
     if (label) gauge.lbl.textContent = String(label).toUpperCase();
