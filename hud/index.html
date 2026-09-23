@@ -100,29 +100,29 @@ body{
 .r1{--m:radial-gradient(circle,transparent 265px,#000 265.5px,#000 270px,transparent 271px);
   width:540px;height:540px;
   background:conic-gradient(from 0deg,var(--ice-bright),var(--ice) 55deg,rgba(120,210,238,.12) 120deg,transparent 165deg);
-  animation:spin 11s linear infinite reverse}
+  animation:spin 14s steps(280) infinite reverse}
 .r2{--m:radial-gradient(circle,transparent 223px,#000 223.5px,#000 228px,transparent 229px);
   width:456px;height:456px;
   background:conic-gradient(from 180deg,var(--ice-bright),var(--ice) 55deg,rgba(120,210,238,.12) 120deg,transparent 165deg);
-  animation:spin 9s linear infinite}
+  animation:spin 12s steps(240) infinite}
 .r3{--m:radial-gradient(circle,transparent 185px,#000 185.5px,#000 190px,transparent 191px);
   width:380px;height:380px;
   background:conic-gradient(from 240deg,var(--ice-bright),var(--ice) 55deg,rgba(120,210,238,.12) 120deg,transparent 165deg);
-  animation:spin 7s linear infinite}
+  animation:spin 10s steps(200) infinite}
 .r4{--m:radial-gradient(circle,transparent 151px,#000 151.5px,#000 156px,transparent 157px);
   width:312px;height:312px;
   background:conic-gradient(from 120deg,var(--ice-bright),var(--ice) 55deg,rgba(120,210,238,.12) 120deg,transparent 165deg);
-  animation:spin 5.5s linear infinite reverse}
+  animation:spin 8s steps(180) infinite reverse}
 .r5{--m:radial-gradient(circle,transparent 118px,#000 118.5px,#000 123px,transparent 124px);
   width:246px;height:246px;
   background:conic-gradient(from 300deg,var(--ice-bright),var(--ice) 55deg,rgba(120,210,238,.12) 120deg,transparent 165deg);
-  animation:spin 4s linear infinite}
+  animation:spin 6s steps(160) infinite}
 
 /* the "ruler" — tick-mark ring · spinning CCW */
 .ruler{--m:radial-gradient(circle, transparent 197px, #000 198px, #000 207px, transparent 208px);
   width:414px;height:414px;border:none!important;
   background:repeating-conic-gradient(rgba(166,236,255,.6) 0deg 0.4deg, transparent 0.4deg 5deg);
-  animation:spin 30s linear infinite reverse}
+  animation:spin 40s steps(360) infinite reverse}
 
 @keyframes spin{to{transform:rotate(360deg)}}
 
@@ -278,7 +278,28 @@ body{
 @media (prefers-reduced-motion:reduce){
   *{animation-duration:.001ms!important;animation-iteration-count:1!important}
 }
+
+/* IDLE / OCCLUDED: when the overlay is fully covered by a window (i.e. you're
+   actually working and can't see the HUD anyway), the overlay process adds
+   .rayo-idle and every animation freezes. WebKit stops re-compositing, so the
+   overlay drops to ~0% CPU and the fan stays quiet. Removed the instant the
+   desktop is shown again. This is the single biggest thermal win. */
+html.rayo-idle *,
+html.rayo-idle *::before,
+html.rayo-idle *::after{animation-play-state:paused!important}
 </style>
+<script>
+// OBS Studio's Linux Browser Source (CEF) has a known bug where it flattens
+// premultiplied alpha instead of compositing it — semi-transparent colors
+// render as if scaled toward black. The desktop overlay (start.sh) doesn't
+// go through this path and is unaffected, so this only activates when OBS
+// explicitly asks for it via ?obsSafe=1, making glass panels fully opaque
+// (immune to the bug) instead of translucent. The page's own background
+// stays genuinely transparent — chroma-key that out in OBS instead.
+if (new URLSearchParams(location.search).get('obsSafe') === '1') {
+  document.documentElement.style.setProperty('--glass', 'rgb(10,16,22)');
+}
+</script>
 </head>
 <body>
 <div class="atmos"></div>

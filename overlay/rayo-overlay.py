@@ -77,6 +77,7 @@ class Overlay(Gtk.Window):
     def __init__(self, url):
         super().__init__(type=Gtk.WindowType.TOPLEVEL)
         self._url = url
+        self._paused = False
 
         # --- transparency ---
         self.set_app_paintable(True)
@@ -139,6 +140,40 @@ class Overlay(Gtk.Window):
         # WebKit advances CSS animations on its own timer. Forcing a 30fps
         # queue_draw here was redundant, pegged ~13% CPU, and made the whole
         # screen hitch periodically.
+
+        # --- pause animation when the HUD is fully covered by a window ---
+        # The HUD is a backdrop: when you maximise/stack a window over it you
+        # can't see it, so there's no point spending CPU spinning rings nobody
+        # can see (that's what kept the fan up). X11/XWayland delivers a
+        # VisibilityNotify when the window becomes fully obscured or exposed;
+        # we freeze the page on obscure and un-freeze on expose. Freezing takes
+        # the WebKit process to ~0% CPU.
+        self.add_events(Gdk.EventMask.VISIBILITY_NOTIFY_MASK)
+        self.connect("visibility-notify-event", self._on_visibility)
+
+    def _on_visibility(self, _w, event):
+        # FULLY_OBSCURED → nothing of the HUD is visible → freeze it.
+        # UNOBSCURED / PARTIALLY_OBSCURED → some of it shows → keep it alive.
+        try:
+            obscured = (event.state == Gdk.VisibilityState.FULLY_OBSCURED)
+        except Exception:
+            obscured = False
+        self._set_paused(obscured)
+        return False
+
+    def _set_paused(self, paused):
+        if paused == self._paused:
+            return
+        self._paused = paused
+        # Toggle the .rayo-idle class the stylesheet uses to pause every
+        # animation (animation-play-state:paused). WebKit then stops
+        # re-compositing and the process idles at ~0% CPU.
+        js = ("document.documentElement.classList.%s('rayo-idle')"
+              % ("add" if paused else "remove"))
+        try:
+            self.web.run_javascript(js, None, None, None)
+        except Exception:
+            pass
 
     def _place(self, *_):
         # Re-assert exact position+size on its monitor (some WMs nudge a new
