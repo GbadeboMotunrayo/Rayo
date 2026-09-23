@@ -15,7 +15,7 @@ If missing:  sudo apt install python3-gi gir1.2-gtk-3.0 gir1.2-webkit2-4.1
 Run:     python3 overlay/rayo-overlay.py
 Quit:    pkill -f rayo-overlay.py   (and pkill -f overlay/stats.py)
 """
-import os, sys, subprocess, signal, atexit, threading, functools
+import os, sys, subprocess, signal, atexit, threading, functools, shutil
 import http.server
 
 # Force the X11 backend so we can use X11 desktop-window hints under XWayland.
@@ -44,6 +44,25 @@ ROOT = os.path.normpath(os.path.join(HERE, ".."))
 HUD_DIR = os.path.join(ROOT, "hud")
 HUD = os.path.join(HUD_DIR, "index.html")
 STATS = os.path.join(HERE, "stats.py")
+
+import json as _json
+
+# --- hub-menu actions (whitelist) -------------------------------------------
+# The HUD can ONLY trigger these named actions — never arbitrary commands.
+# power-off/reboot/suspend need no password for the active graphical session
+# (polkit implicit-active = yes). App launchers fall back through candidates.
+ACTIONS = {
+    "poweroff": [["systemctl", "poweroff"]],
+    "reboot":   [["systemctl", "reboot"]],
+    "suspend":  [["systemctl", "suspend"]],
+    "lock":     [["loginctl", "lock-session"], ["gnome-screensaver-command", "-l"]],
+    "logout":   [["gnome-session-quit", "--logout", "--no-prompt"]],
+    "files":    [["nautilus", "--new-window"], ["xdg-open", os.path.expanduser("~")]],
+    "terminal": [["ptyxis"], ["kgx"], ["gnome-terminal"], ["xterm"]],
+    "web":      [["firefox"], ["xdg-open", "https://duckduckgo.com"]],
+    "settings": [["gnome-control-center"]],
+    "displays": [["gnome-control-center", "display"]],
+}
 
 
 class _QuietHandler(http.server.SimpleHTTPRequestHandler):
@@ -119,8 +138,14 @@ class Overlay(Gtk.Window):
         self.set_default_size(g.width, g.height)
         self.resize(g.width, g.height)
 
-        # --- the web view ---
-        self.web = WebKit2.WebView()
+        # --- the web view (with a JS→system command bridge) ---
+        # The HUD's hub is interactive: clicking it opens menus whose actions
+        # (shutdown, sleep, launch apps…) are sent from the page to here via
+        # window.webkit.messageHandlers.rayo.postMessage(...). We run them.
+        ucm = WebKit2.UserContentManager()
+        ucm.register_script_message_handler("rayo")
+        ucm.connect("script-message-received::rayo", self._on_hud_message)
+        self.web = WebKit2.WebView.new_with_user_content_manager(ucm)
         s = self.web.get_settings()
         s.set_enable_write_console_messages_to_stdout(False)
         s.set_property("enable-developer-extras", False)
@@ -174,6 +199,47 @@ class Overlay(Gtk.Window):
             self.web.run_javascript(js, None, None, None)
         except Exception:
             pass
+
+    def _on_hud_message(self, _ucm, js_result):
+        """Receive {action: ...} from the HUD and run the matching whitelisted
+        command. Anything not in ACTIONS (or the DND toggle) is ignored."""
+        try:
+            val = js_result.get_js_value()
+            data = _json.loads(val.to_string())
+            action = data.get("action", "")
+        except Exception as e:
+            print(f"[rayo] bad hud message: {e}", file=sys.stderr)
+            return
+        if action == "dnd":
+            self._toggle_dnd()
+            return
+        candidates = ACTIONS.get(action)
+        if not candidates:
+            return
+        for argv in candidates:
+            if shutil.which(argv[0]) is None:
+                continue
+            try:
+                subprocess.Popen(argv, stdout=subprocess.DEVNULL,
+                                 stderr=subprocess.DEVNULL, start_new_session=True)
+                print(f"[rayo] action: {action} -> {' '.join(argv)}")
+                return
+            except Exception as e:
+                print(f"[rayo] action {action} failed: {e}", file=sys.stderr)
+        print(f"[rayo] action {action}: no runnable command found", file=sys.stderr)
+
+    def _toggle_dnd(self):
+        """Toggle Focus/Do-Not-Disturb (GNOME 'show-banners')."""
+        try:
+            cur = subprocess.check_output(
+                ["gsettings", "get", "org.gnome.desktop.notifications", "show-banners"],
+                text=True).strip()
+            new = "false" if cur == "true" else "true"
+            subprocess.run(["gsettings", "set", "org.gnome.desktop.notifications",
+                            "show-banners", new], check=False)
+            print(f"[rayo] focus/DND -> banners {new}")
+        except Exception as e:
+            print(f"[rayo] dnd toggle failed: {e}", file=sys.stderr)
 
     def _place(self, *_):
         # Re-assert exact position+size on its monitor (some WMs nudge a new

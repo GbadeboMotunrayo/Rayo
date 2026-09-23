@@ -294,6 +294,73 @@ body{
 .status .o.sim{color:var(--muted)}
 .status .o.sim::before{color:var(--red)}
 
+/* ============================================================
+   INTERACTIVE HUB CONTROL (control.js)
+   ============================================================ */
+/* let clicks reach the hub, not the decorative rings/orb behind it */
+.reactor .ring,.ruler,.blades,.orb,.orb *{pointer-events:none}
+.hub-hit{position:absolute;left:50%;top:50%;width:150px;height:150px;
+  transform:translate(-50%,-50%);border-radius:50%;cursor:pointer;z-index:6;
+  pointer-events:auto}
+.hub-hit:hover{box-shadow:0 0 0 2px rgba(166,236,255,.25) inset}
+
+/* radial menu — items bloom out from the centre to 12 points */
+.hubmenu{position:absolute;left:50%;top:50%;width:0;height:0;z-index:20;
+  pointer-events:none}
+.hubmenu.open{pointer-events:auto}
+.hm-item{position:absolute;left:0;top:0;
+  min-width:78px;padding:9px 12px;border:1px solid var(--glass-brd);
+  background:rgba(10,16,22,.92);color:var(--paper);border-radius:11px;
+  font-family:var(--font-mono);font-size:11px;font-weight:600;letter-spacing:1px;
+  white-space:nowrap;cursor:pointer;text-align:center;
+  box-shadow:0 8px 26px rgba(0,0,0,.55),inset 0 1px 0 var(--glass-hi);
+  transform:translate(-50%,-50%) scale(.2);opacity:0;
+  transition:transform .34s cubic-bezier(.2,.8,.2,1.2),opacity .28s ease,
+             border-color .2s,color .2s,background .2s}
+.hubmenu.open .hm-item{opacity:1;
+  transform:translate(calc(-50% + var(--x)),calc(-50% + var(--y))) scale(1)}
+/* dock-style magnify on hover */
+.hubmenu.open .hm-item:hover{
+  transform:translate(calc(-50% + var(--x)),calc(-50% + var(--y))) scale(1.28);
+  border-color:var(--ice);color:var(--ice-bright);
+  background:rgba(18,30,40,.96);box-shadow:0 10px 30px rgba(0,0,0,.6),0 0 18px rgba(120,210,238,.35)}
+.hm-item.danger:hover{border-color:var(--red);color:#ff9a9d;
+  box-shadow:0 10px 30px rgba(0,0,0,.6),0 0 18px rgba(229,72,77,.4)}
+
+/* quick power bar (double-click) */
+.powerbar{position:absolute;left:50%;top:calc(50% - 250px);
+  transform:translate(-50%,-50%) scale(.9);z-index:21;display:flex;gap:10px;
+  padding:12px;border:1px solid var(--glass-brd);border-radius:16px;
+  background:rgba(10,16,22,.94);box-shadow:0 14px 40px rgba(0,0,0,.6),inset 0 1px 0 var(--glass-hi);
+  opacity:0;pointer-events:none;transition:opacity .25s ease,transform .28s cubic-bezier(.2,.8,.2,1.1)}
+.powerbar.open{opacity:1;pointer-events:auto;transform:translate(-50%,-50%) scale(1)}
+.powerbar button{display:flex;flex-direction:column;align-items:center;gap:5px;
+  min-width:84px;padding:12px 10px;border:1px solid transparent;border-radius:12px;
+  background:rgba(120,210,238,.06);color:var(--paper);cursor:pointer;
+  font-family:var(--font-mono);font-size:20px;line-height:1;transition:all .18s}
+.powerbar button span{font-size:9px;letter-spacing:1.5px;color:var(--muted)}
+.powerbar button:hover{background:rgba(120,210,238,.14);border-color:var(--ice);
+  box-shadow:0 0 16px rgba(120,210,238,.3)}
+.powerbar button:hover span{color:var(--ice)}
+.powerbar button.danger:hover{background:rgba(229,72,77,.14);border-color:var(--red);
+  box-shadow:0 0 16px rgba(229,72,77,.35)}
+.powerbar button.danger:hover span{color:#ff9a9d}
+
+/* shutdown countdown */
+.countdown{position:absolute;inset:0;z-index:40;display:flex;
+  flex-direction:column;align-items:center;justify-content:center;gap:14px;
+  background:radial-gradient(circle at 50% 45%,rgba(6,8,11,.86),rgba(6,8,11,.97));
+  opacity:0;pointer-events:none;transition:opacity .25s ease}
+.countdown.open{opacity:1;pointer-events:auto}
+.cd-num{font-family:var(--font-mono);font-size:120px;font-weight:800;color:#ff9a9d;
+  text-shadow:0 0 40px rgba(229,72,77,.5);line-height:1}
+.cd-msg{font-family:var(--font-mono);font-size:16px;letter-spacing:6px;color:var(--paper)}
+.cd-cancel{margin-top:10px;padding:12px 28px;border:1px solid var(--ice);
+  background:rgba(120,210,238,.1);color:var(--ice-bright);border-radius:12px;
+  font-family:var(--font-mono);font-size:13px;letter-spacing:2px;cursor:pointer;
+  transition:all .18s}
+.cd-cancel:hover{background:rgba(120,210,238,.22);box-shadow:0 0 20px rgba(120,210,238,.4)}
+
 @media (prefers-reduced-motion:reduce){
   *{animation-duration:.001ms!important;animation-iteration-count:1!important}
 }
@@ -343,6 +410,27 @@ if (new URLSearchParams(location.search).get('obsSafe') === '1') {
       <span class="hi"></span>
       <span class="tick t"></span><span class="tick l"></span><span class="tick r"></span>
     </div>
+    <!-- interactive hub: 1 click = radial menu · 2 = power bar · 3 = shutdown -->
+    <div class="hub-hit" id="hub-hit" title="click: menu  ·  double-click: power  ·  triple-click: shut down"></div>
+  </div>
+
+  <!-- RADIAL CONTROL MENU (blooms from the hub; items built by control.js) -->
+  <div class="hubmenu" id="hubmenu" aria-hidden="true"></div>
+
+  <!-- QUICK POWER BAR (double-click the hub) -->
+  <div class="powerbar" id="powerbar" aria-hidden="true">
+    <button data-act="poweroff" class="danger">⏻<span>SHUTDOWN</span></button>
+    <button data-act="reboot">⟳<span>RESTART</span></button>
+    <button data-act="suspend">☾<span>SLEEP</span></button>
+    <button data-act="lock">⚿<span>LOCK</span></button>
+    <button data-act="dnd">◐<span>FOCUS</span></button>
+  </div>
+
+  <!-- SHUTDOWN COUNTDOWN (triple-click, cancellable) -->
+  <div class="countdown" id="countdown" aria-hidden="true">
+    <div class="cd-num" id="cd-num">4</div>
+    <div class="cd-msg">POWERING DOWN</div>
+    <button class="cd-cancel" id="cd-cancel">CANCEL</button>
   </div>
 
   <!-- LEFT CLUSTER -->
@@ -424,5 +512,6 @@ if (new URLSearchParams(location.search).get('obsSafe') === '1') {
 </div>
 
 <script src="core/hud.js"></script>
+<script src="core/control.js"></script>
 </body>
 </html>
