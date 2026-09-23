@@ -117,6 +117,18 @@ recipe were studied from [JashanMaan28/Zorin](https://github.com/JashanMaan28/Zo
 related names are trademarks of their owners — Rayo ships no copyrighted
 artwork; themes are original interpretations.
 
+## Support / Donate
+
+Rayo is free and open-source, built in the open. If it made your desktop
+cooler, a small tip helps cover hosting and buys build time for new hero
+themes and the one-line installer:
+
+- ☕ **Ko-fi:** [ko-fi.com/motunrayogbadebo](https://ko-fi.com/motunrayogbadebo)
+<!-- - 💳 **Paystack** (Nigeria-friendly): https://paystack.com/pay/your-slug -->
+
+Not into money? **Starring the repo**, filing issues, and sending **theme
+pull requests** help just as much. 🙏
+
 ## License
 
 MIT — see [LICENSE](LICENSE). Use it, fork it, theme it, share it.
