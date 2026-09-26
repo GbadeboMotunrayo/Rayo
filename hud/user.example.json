@@ -1,0 +1,7 @@
+{
+  "_comment": "Copy this file to hud/user.json to personalise your HUD without touching themes. It is gitignored, so it stays yours and survives updates. Any field is optional; it overrides the active theme.",
+  "wordmark": "YOUR NAME",
+  "subtitle": "YOUR TAGLINE",
+  "callsign": "Y.O.U",
+  "tokens": { "--ice": "#78d2ee" }
+}

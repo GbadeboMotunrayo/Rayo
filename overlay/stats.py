@@ -149,6 +149,25 @@ def fan_info():
 
 
 # ---- network (throughput + wifi) -------------------------------------------
+def _resolve_ssid(iface):
+    """Best-effort network NAME (not the interface id). Tries iwgetid, then
+    `iw dev link`, then nmcli — whichever yields a name first."""
+    if shutil.which("iwgetid"):
+        s = os.popen(f"iwgetid {iface} -r 2>/dev/null").read().strip()
+        if s:
+            return s
+    if shutil.which("iw"):
+        for line in os.popen(f"iw dev {iface} link 2>/dev/null").read().splitlines():
+            line = line.strip()
+            if line.startswith("SSID:"):
+                return line.split("SSID:", 1)[1].strip()
+    if shutil.which("nmcli"):
+        for line in os.popen("nmcli -t -f active,ssid dev wifi 2>/dev/null").read().splitlines():
+            if line.startswith("yes:"):
+                return line.split(":", 1)[1].strip()
+    return ""
+
+
 _prev_net = None
 def net_info():
     global _prev_net
@@ -181,9 +200,7 @@ def net_info():
                 signal = round(float(p[2].rstrip(".")) / 70 * 100)
             except (IndexError, ValueError):
                 signal = 0
-            # SSID via iwgetid if available
-            if shutil.which("iwgetid"):
-                ssid = os.popen(f"iwgetid {wiface} -r 2>/dev/null").read().strip()
+            ssid = _resolve_ssid(wiface)
             break
     return round(down), round(up), signal, ssid, (iface or "")
 

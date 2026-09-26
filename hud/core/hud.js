@@ -95,9 +95,8 @@
 
   // Values are set directly once per second; the progress bars glide via their
   // CSS `transition: width` (see stylesheet). We deliberately do NOT re-paint
-  // every frame — doing so kept restarting the CSS transition and made the
+  // every frame: doing so kept restarting the CSS transition and made the
   // numbers/bars flicker ("glitch") in the info panels.
-  function ease(_key, target) { return target; }
 
   // ---- mock provider: realistic drift when no stats.json present -----------
   const mock = {
@@ -176,19 +175,19 @@
 
   function render(d) {
     // left cluster
-    const batt = ease('batt', d.battery);
+    const batt = d.battery;
     $('pwr-v').innerHTML = `${Math.round(batt)}<span class="u">%</span>`;
     $('pwr-a').textContent = battLabel(d);
     // battery card glows gold while charging
     $('pwr').classList.toggle('charging', !!d.charging && d.batt_status !== 'Full');
     paintBar($('pwr-b'), batt);
 
-    const cpu = ease('cpu', d.cpu);
+    const cpu = d.cpu;
     $('sys-v').innerHTML = `${Math.round(cpu)}<span class="u">%</span>`;
     $('sys-a').textContent = `${d.freq} GHz`;
     paintBar($('sys-b'), cpu);
 
-    const sig = ease('sig', d.signal);
+    const sig = d.signal;
     $('net-v').innerHTML = `${Math.round(sig)}<span class="u">%</span>`;
     $('net-a').textContent = d.ssid.length > 18 ? d.ssid.slice(0, 17) + '…' : d.ssid;
     paintBar($('net-b'), sig);
@@ -208,17 +207,17 @@
     $('t-cpu').textContent = Math.round(cpu);
     $('t-freq').textContent = `${d.freq} GHz`;
     paintBar($('t-cpu-b'), cpu);
-    const mem = ease('mem', d.mem);
+    const mem = d.mem;
     $('t-mem').textContent = Math.round(mem);
     $('t-memx').textContent = `${d.mem_used} / ${d.mem_total} GiB`;
     paintBar($('t-mem-b'), mem);
-    const disk = ease('disk', d.disk, 0.3);
+    const disk = d.disk;
     $('t-disk').textContent = Math.round(disk);
     $('t-diskx').textContent = `${d.disk_used} / ${d.disk_total} GiB`;
     paintBar($('t-disk-b'), disk);
     $('t-ssid').textContent = d.ssid.length > 22 ? d.ssid.slice(0, 21) + '…' : d.ssid;
-    $('t-down').textContent = fmtRate(ease('down', d.down, 0.25));
-    $('t-up').textContent = fmtRate(ease('up', d.up, 0.25));
+    $('t-down').textContent = fmtRate(d.down);
+    $('t-up').textContent = fmtRate(d.up);
     $('t-up2').textContent = fmtUptime(d.boot);
 
     // fan speedometer

@@ -14,6 +14,17 @@
   const root = document.documentElement;
   let current = 'rayo';
 
+  // Optional personal overrides (hud/user.json, gitignored) applied ON TOP of
+  // every theme — lets you set your own wordmark/subtitle/callsign/tokens
+  // without editing the shipped themes. Fetched once and cached.
+  let userCfg;                       // undefined = not fetched yet
+  async function getUser() {
+    if (userCfg !== undefined) return userCfg;
+    try { const r = await fetch('user.json', { cache: 'no-store' }); userCfg = r.ok ? await r.json() : null; }
+    catch (e) { userCfg = null; }
+    return userCfg;
+  }
+
   function pickInitial() {
     const q = new URLSearchParams(location.search).get('theme');
     if (q && THEMES.includes(q)) return q;
@@ -33,6 +44,14 @@
       set('.baseline .brand', t.wordmark);
       set('.baseline .sub', t.subtitle);
       set('.status .r', t.callsign);
+      // personal overrides win
+      const u = await getUser();
+      if (u) {
+        if (u.tokens) for (const k in u.tokens) root.style.setProperty(k, u.tokens[k]);
+        if (u.wordmark) set('.baseline .brand', u.wordmark);
+        if (u.subtitle) set('.baseline .sub', u.subtitle);
+        if (u.callsign) set('.status .r', u.callsign);
+      }
       root.setAttribute('data-theme', name);
       current = name;
       try { localStorage.setItem(KEY, name); } catch (e) {}

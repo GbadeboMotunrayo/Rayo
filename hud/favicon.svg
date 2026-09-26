@@ -1,0 +1,16 @@
+<svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Rayo">
+  <defs>
+    <linearGradient id="rayo-g" x1="12" y1="8" x2="52" y2="56" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#c8f4ff"/>
+      <stop offset="0.5" stop-color="#78d2ee"/>
+      <stop offset="1" stop-color="#1f9fc4"/>
+    </linearGradient>
+  </defs>
+  <!-- reactor ring (faint full) -->
+  <circle cx="32" cy="32" r="25" stroke="url(#rayo-g)" stroke-width="3" opacity="0.35"/>
+  <!-- bright travelling arc -->
+  <path d="M32 7 a25 25 0 0 1 22 13" stroke="url(#rayo-g)" stroke-width="3" stroke-linecap="round"/>
+  <path d="M32 57 a25 25 0 0 1 -22 -13" stroke="url(#rayo-g)" stroke-width="3" stroke-linecap="round" opacity="0.7"/>
+  <!-- the ray / lightning bolt -->
+  <path d="M37 12 L21 34 H30 L27 52 L45 28 H35 Z" fill="url(#rayo-g)"/>
+</svg>

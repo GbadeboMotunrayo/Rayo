@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rayo · Turn your Linux desktop into a comic-hero interface</title>
+<meta name="description" content="Rayo is a free, open-source animated HUD for Linux. A living arc-reactor, live system stats, an interactive control hub, and four switchable themes. Runs on your wallpaper.">
+<link rel="icon" type="image/svg+xml" href="assets/rayo-mark.svg">
+<meta property="og:title" content="Rayo · Comic-hero HUD for Linux">
+<meta property="og:description" content="A free, open-source animated desktop HUD. Living arc-reactor, live stats, interactive hub, four themes.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="assets/og-card.png">
+<meta name="twitter:card" content="summary_large_image">
+<style>
+:root{
+  --bg:#06080b; --bg-2:#0a0e13; --panel:#0d141c; --line:rgb(120 210 238 / .14);
+  --ice:#78d2ee; --ice-b:#a6ecff; --ice-deep:#1f6f86;
+  --ink:#d7e6ee; --muted:#7d8b97; --danger:#e5484d;
+  --radius:14px;
+  --ui:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --mono:ui-monospace,"JetBrains Mono","SF Mono",Menlo,monospace;
+  --maxw:1180px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--ink);font-family:var(--ui);line-height:1.6;
+  -webkit-font-smoothing:antialiased;overflow-x:hidden}
+a{color:inherit;text-decoration:none}
+img,svg,iframe{display:block;max-width:100%}
+.wrap{max-width:var(--maxw);margin:0 auto;padding:0 24px}
+.mono{font-family:var(--mono)}
+
+/* subtle ambient grid + glow, fixed, non-interactive */
+body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:
+    radial-gradient(60% 50% at 70% 0%, rgb(120 210 238 / .10), transparent 60%),
+    radial-gradient(50% 40% at 0% 100%, rgb(120 210 238 / .06), transparent 60%),
+    linear-gradient(rgb(120 210 238 / .035) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(120 210 238 / .035) 1px, transparent 1px);
+  background-size:auto,auto,54px 54px,54px 54px;
+  mask:radial-gradient(120% 100% at 50% 0%,#000 55%,transparent 100%)}
+.wrap,nav,section,footer{position:relative;z-index:1}
+
+/* ---------- nav ---------- */
+nav{position:sticky;top:0;z-index:50;height:66px;display:flex;align-items:center;
+  backdrop-filter:blur(12px);background:rgb(6 8 11 / .72);border-bottom:1px solid var(--line)}
+nav .wrap{display:flex;align-items:center;justify-content:space-between;width:100%}
+.brand{display:flex;align-items:center;gap:11px;font-weight:700;letter-spacing:.5px;font-size:18px}
+.brand img{width:30px;height:30px}
+.brand b{background:linear-gradient(90deg,var(--ice-b),var(--ice));-webkit-background-clip:text;background-clip:text;color:transparent}
+.nav-links{display:flex;align-items:center;gap:8px}
+.nav-links a{padding:8px 14px;border-radius:10px;color:var(--muted);font-size:14px;transition:color .2s,background .2s}
+.nav-links a:hover{color:var(--ink);background:rgb(120 210 238 / .07)}
+.nav-links a.cta{color:var(--bg);background:var(--ice);font-weight:600}
+.nav-links a.cta:hover{background:var(--ice-b);color:var(--bg)}
+@media(max-width:720px){.nav-links a.ghost{display:none}}
+
+/* ---------- buttons ---------- */
+.btn{display:inline-flex;align-items:center;gap:9px;padding:13px 22px;border-radius:999px;
+  font-weight:600;font-size:15px;cursor:pointer;border:1px solid transparent;transition:transform .12s,background .2s,border-color .2s}
+.btn:active{transform:translateY(1px)}
+.btn-primary{background:var(--ice);color:var(--bg)}
+.btn-primary:hover{background:var(--ice-b)}
+.btn-ghost{background:transparent;border-color:var(--line);color:var(--ink)}
+.btn-ghost:hover{border-color:var(--ice);background:rgb(120 210 238 / .06)}
+.btn svg{width:18px;height:18px}
+
+/* ---------- hero ---------- */
+.hero{padding:clamp(48px,9vw,104px) 0 72px}
+.hero .wrap{display:grid;grid-template-columns:1.02fr 1fr;gap:56px;align-items:center}
+.hero h1{font-size:clamp(38px,5.4vw,62px);line-height:1.02;letter-spacing:-.025em;font-weight:800}
+.hero h1 .g{background:linear-gradient(90deg,var(--ice-b),var(--ice) 60%,var(--ice-deep));-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero p.sub{margin-top:22px;font-size:clamp(16px,1.7vw,19px);color:var(--muted);max-width:34ch}
+.hero-cta{margin-top:32px;display:flex;gap:14px;flex-wrap:wrap}
+.hero-meta{margin-top:26px;display:flex;gap:22px;flex-wrap:wrap;font-family:var(--mono);font-size:12.5px;color:var(--muted)}
+.hero-meta span{display:inline-flex;align-items:center;gap:7px}
+.hero-meta b{color:var(--ice);font-weight:600}
+
+/* live demo frame */
+.screen{border:1px solid var(--line);border-radius:16px;overflow:hidden;
+  background:#04060a;box-shadow:0 30px 80px rgb(0 0 0 / .55), 0 0 0 1px rgb(120 210 238 / .04);
+  position:relative}
+.screen-bar{height:34px;display:flex;align-items:center;gap:7px;padding:0 13px;
+  background:var(--bg-2);border-bottom:1px solid var(--line)}
+.screen-bar i{width:10px;height:10px;border-radius:50%;background:rgb(255 255 255 / .12)}
+.screen-bar .t{margin-left:10px;font-family:var(--mono);font-size:11px;color:var(--muted)}
+.screen-frame{aspect-ratio:16/10;width:100%;position:relative;background:#04060a}
+.screen-frame iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+.demo-hint{margin-top:12px;font-family:var(--mono);font-size:11.5px;color:var(--muted);text-align:center}
+
+/* theme pills under demo */
+.theme-pills{margin-top:16px;display:flex;gap:9px;flex-wrap:wrap;justify-content:center}
+.theme-pills button{display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border-radius:999px;
+  border:1px solid var(--line);background:transparent;color:var(--muted);cursor:pointer;
+  font-family:var(--mono);font-size:12px;letter-spacing:.5px;transition:all .18s}
+.theme-pills button .sw{width:11px;height:11px;border-radius:50%}
+.theme-pills button:hover{color:var(--ink);border-color:var(--ice)}
+.theme-pills button[aria-pressed="true"]{color:var(--bg);background:var(--ice);border-color:var(--ice)}
+
+/* ---------- section shell ---------- */
+section{padding:clamp(64px,9vw,110px) 0}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.24em;text-transform:uppercase;color:var(--ice-deep)}
+.h2{font-size:clamp(28px,3.6vw,44px);line-height:1.08;letter-spacing:-.02em;font-weight:800;margin-top:10px}
+.lead{margin-top:16px;color:var(--muted);font-size:17px;max-width:56ch}
+
+/* themes gallery */
+.theme-grid{margin-top:44px;display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
+.theme-card{border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;background:var(--panel);transition:transform .2s,border-color .2s}
+.theme-card:hover{transform:translateY(-4px);border-color:rgb(120 210 238 / .4)}
+.theme-swatch{height:120px;display:grid;place-items:center;position:relative}
+.theme-swatch .core{width:52px;height:52px;border-radius:50%;box-shadow:0 0 30px 4px currentColor}
+.theme-card .body{padding:16px 18px}
+.theme-card .body h3{font-size:16px;letter-spacing:.5px;font-weight:700}
+.theme-card .body p{color:var(--muted);font-size:13.5px;margin-top:4px}
+
+/* features: asymmetric bento, varied cells */
+.bento{margin-top:44px;display:grid;grid-template-columns:repeat(6,1fr);gap:18px}
+.cell{border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);padding:26px}
+.cell h3{font-size:19px;font-weight:700;letter-spacing:-.01em}
+.cell p{color:var(--muted);font-size:14.5px;margin-top:8px}
+.cell .ic{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;
+  background:rgb(120 210 238 / .1);color:var(--ice);margin-bottom:16px}
+.cell .ic svg{width:20px;height:20px}
+.c-6{grid-column:span 6}.c-4{grid-column:span 4}.c-3{grid-column:span 3}.c-2{grid-column:span 2}
+.cell.feature{display:grid;grid-template-columns:1.1fr 1fr;gap:28px;align-items:center}
+.cell.feature .mini{border:1px solid var(--line);border-radius:12px;overflow:hidden;aspect-ratio:16/10;background:#04060a}
+.cell.feature .mini iframe{width:100%;height:100%;border:0}
+.stat-row{display:flex;gap:30px;flex-wrap:wrap;margin-top:6px}
+.stat-row .s b{font-family:var(--mono);font-size:26px;color:var(--ice);font-weight:700;display:block}
+.stat-row .s span{font-size:12.5px;color:var(--muted)}
+
+/* install */
+.install .wrap{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:center}
+.codeblock{border:1px solid var(--line);border-radius:var(--radius);background:#04060a;overflow:hidden}
+.codeblock .cb-top{display:flex;align-items:center;justify-content:space-between;padding:11px 16px;border-bottom:1px solid var(--line);font-family:var(--mono);font-size:11.5px;color:var(--muted)}
+.codeblock pre{padding:20px 18px;overflow-x:auto;font-family:var(--mono);font-size:13.5px;line-height:1.7;color:var(--ink)}
+.codeblock .cm{color:var(--muted)}
+.copy{background:transparent;border:1px solid var(--line);color:var(--muted);border-radius:8px;padding:5px 11px;cursor:pointer;font-family:var(--mono);font-size:11px;transition:all .18s}
+.copy:hover{color:var(--ice);border-color:var(--ice)}
+.steps{list-style:none;display:grid;gap:18px}
+.steps li{display:flex;gap:15px}
+.steps .n{flex:none;width:30px;height:30px;border-radius:50%;border:1px solid var(--line);display:grid;place-items:center;font-family:var(--mono);font-size:13px;color:var(--ice)}
+.steps li b{display:block;font-size:15.5px}
+.steps li p{color:var(--muted);font-size:13.5px}
+
+/* donate band */
+.donate{text-align:center}
+.donate .wrap{max-width:720px}
+.donate .btns{margin-top:28px;display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
+
+/* footer */
+footer{border-top:1px solid var(--line);padding:40px 0}
+footer .wrap{display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap}
+footer .brand{font-size:16px}
+footer .fl{display:flex;gap:20px;color:var(--muted);font-size:13.5px}
+footer .fl a:hover{color:var(--ice)}
+
+/* scroll reveal */
+.reveal{opacity:0;transform:translateY(22px);transition:opacity .7s cubic-bezier(.16,1,.3,1),transform .7s cubic-bezier(.16,1,.3,1)}
+.reveal.in{opacity:1;transform:none}
+
+@media(max-width:860px){
+  .hero .wrap{grid-template-columns:1fr;gap:38px}
+  .hero p.sub{max-width:100%}
+  .theme-grid{grid-template-columns:repeat(2,1fr)}
+  .bento{grid-template-columns:repeat(2,1fr)}
+  .c-6,.c-4,.c-3,.c-2{grid-column:span 2}
+  .cell.feature{grid-template-columns:1fr}
+  .install .wrap{grid-template-columns:1fr}
+}
+@media(prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  .reveal{opacity:1;transform:none;transition:none}
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <a class="brand" href="#top"><img src="assets/rayo-mark.svg" alt=""><span>R<b>A</b>YO</span></a>
+    <div class="nav-links">
+      <a class="ghost" href="#themes">Themes</a>
+      <a class="ghost" href="#features">Features</a>
+      <a class="ghost" href="#install">Install</a>
+      <a class="cta" href="https://github.com/GbadeboMotunrayo/Rayo" target="_blank" rel="noopener">GitHub</a>
+    </div>
+  </div>
+</nav>
+
+<header class="hero" id="top">
+  <div class="wrap">
+    <div>
+      <h1>Your desktop,<br><span class="g">but make it a superhero.</span></h1>
+      <p class="sub">A free, open-source animated HUD for Linux. A living arc-reactor, your real system stats, and an interactive control hub, right on your wallpaper.</p>
+      <div class="hero-cta">
+        <a class="btn btn-primary" href="#install">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+          Get Rayo
+        </a>
+        <a class="btn btn-ghost" href="hud/index.html?theme=rayo" target="_blank" rel="noopener">Open live demo</a>
+      </div>
+      <div class="hero-meta">
+        <span><b>MIT</b> licensed</span>
+        <span><b>0</b> dependencies</span>
+        <span><b>4</b> themes</span>
+        <span><b>~0%</b> CPU when hidden</span>
+      </div>
+    </div>
+
+    <div>
+      <div class="screen">
+        <div class="screen-bar"><i></i><i></i><i></i><span class="t">rayo · live</span></div>
+        <div class="screen-frame">
+          <iframe id="demo" src="hud/index.html?theme=rayo" title="Rayo live HUD demo" loading="eager"></iframe>
+        </div>
+      </div>
+      <div class="theme-pills" id="pills">
+        <button data-theme="rayo" aria-pressed="true"><span class="sw" style="background:#78d2ee"></span>RAYO</button>
+        <button data-theme="cyberpunk" aria-pressed="false"><span class="sw" style="background:#ff2ea6"></span>CYBERPUNK</button>
+        <button data-theme="cyborg" aria-pressed="false"><span class="sw" style="background:#ff9d2f"></span>CYBORG</button>
+        <button data-theme="tron" aria-pressed="false"><span class="sw" style="background:#35e0ff"></span>TRON</button>
+      </div>
+      <p class="demo-hint">Live, running in your browser. Click a theme. Everything you see is the real thing.</p>
+    </div>
+  </div>
+</header>
+
+<section id="themes">
+  <div class="wrap">
+    <div class="reveal">
+      <p class="eyebrow">Four worlds</p>
+      <h2 class="h2">One HUD. Pick your universe.</h2>
+      <p class="lead">A theme is a single JSON file of colour tokens. Switch live from the hub, or bring your own hero. Batman, Halo, Samus, whatever you main.</p>
+    </div>
+    <div class="theme-grid reveal">
+      <div class="theme-card">
+        <div class="theme-swatch" style="background:radial-gradient(circle at 50% 40%,#0a1420,#06080b);color:#78d2ee"><div class="core" style="background:radial-gradient(circle at 34% 30%,#e9f9ff,#78d2ee 60%,#0c3b49)"></div></div>
+        <div class="body"><h3>RAYO</h3><p>Iron Man. Ice-blue and gold.</p></div>
+      </div>
+      <div class="theme-card">
+        <div class="theme-swatch" style="background:radial-gradient(circle at 50% 40%,#1a0a24,#0a0410);color:#ff2ea6"><div class="core" style="background:radial-gradient(circle at 34% 30%,#ffd9f0,#ff2ea6 60%,#2a0820)"></div></div>
+        <div class="body"><h3>CYBERPUNK</h3><p>Night-city neon. Magenta and yellow.</p></div>
+      </div>
+      <div class="theme-card">
+        <div class="theme-swatch" style="background:radial-gradient(circle at 50% 40%,#1a0f04,#0a0703);color:#ff9d2f"><div class="core" style="background:radial-gradient(circle at 34% 30%,#ffe9c8,#ff9d2f 60%,#2a1704)"></div></div>
+        <div class="body"><h3>CYBORG</h3><p>Combat chassis. Molten amber.</p></div>
+      </div>
+      <div class="theme-card">
+        <div class="theme-swatch" style="background:radial-gradient(circle at 50% 40%,#02141a,#000305);color:#35e0ff"><div class="core" style="background:radial-gradient(circle at 34% 30%,#e6ffff,#35e0ff 60%,#031820)"></div></div>
+        <div class="body"><h3>TRON</h3><p>The Grid. Electric cyan on black.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="features">
+  <div class="wrap">
+    <div class="reveal">
+      <h2 class="h2">Not a screenshot. A living interface.</h2>
+      <p class="lead">Rayo runs as a transparent, click-through layer on your desktop. It reads real data and reacts to it.</p>
+    </div>
+    <div class="bento">
+      <div class="cell feature c-6 reveal">
+        <div>
+          <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3 8 4-16 3 8h4"/></svg></div>
+          <h3>Live system telemetry</h3>
+          <p>CPU, memory, disk, battery with charge ETA, network throughput, weather, and a real-time fan speedometer. Read straight from the kernel, no daemons.</p>
+          <div class="stat-row">
+            <div class="s"><b>1s</b><span>refresh</span></div>
+            <div class="s"><b>/proc</b><span>data source</span></div>
+            <div class="s"><b>stdlib</b><span>only</span></div>
+          </div>
+        </div>
+        <div class="mini"><iframe src="hud/index.html?theme=tron" title="Rayo telemetry" loading="lazy"></iframe></div>
+      </div>
+
+      <div class="cell c-3 reveal">
+        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="9"/></svg></div>
+        <h3>Interactive hub</h3>
+        <p>Click the reactor for a radial menu. Double-click for power controls. It is your desktop's command center.</p>
+      </div>
+      <div class="cell c-3 reveal">
+        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 9 9"/><path d="M12 3v9l6 3"/></svg></div>
+        <h3>Featherweight</h3>
+        <p>Animation pauses when a window covers it, so it idles near 0% CPU. Your fan stays quiet.</p>
+      </div>
+
+      <div class="cell c-2 reveal">
+        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M4 12h16M4 17h10"/></svg></div>
+        <h3>Themeable</h3>
+        <p>One JSON file per theme. Recolours the entire HUD.</p>
+      </div>
+      <div class="cell c-2 reveal">
+        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M8 21h8"/></svg></div>
+        <h3>Any resolution</h3>
+        <p>Scales to fit any screen. Multi-monitor aware.</p>
+      </div>
+      <div class="cell c-2 reveal">
+        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 4 6v6c0 5 3.5 8 8 10 4.5-2 8-5 8-10V6z"/></svg></div>
+        <h3>Yours to fork</h3>
+        <p>MIT. Plain HTML, CSS, and Python. No build step.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="install" class="install">
+  <div class="wrap">
+    <div class="reveal">
+      <p class="eyebrow">Get started</p>
+      <h2 class="h2">Running in under a minute.</h2>
+      <p class="lead">Works on GNOME, KDE, and most Linux desktops. Needs Python 3 and WebKitGTK, which ship with most distros.</p>
+      <div class="codeblock" style="margin-top:26px">
+        <div class="cb-top"><span>one line</span><button class="copy" id="copybtn">copy</button></div>
+        <pre id="cmd"><span class="cm"># clone and switch on the overlay</span>
+git clone https://github.com/GbadeboMotunrayo/Rayo.git
+cd Rayo &amp;&amp; ./start.sh</pre>
+      </div>
+    </div>
+    <div class="reveal">
+      <ol class="steps">
+        <li><span class="n">1</span><div><b>Clone the repo</b><p>Grab it from GitHub. It is a few hundred KB, no heavy assets.</p></div></li>
+        <li><span class="n">2</span><div><b>Run ./start.sh</b><p>Sets a clean backdrop and mounts the transparent overlay on your desktop.</p></div></li>
+        <li><span class="n">3</span><div><b>Click the reactor</b><p>Open the hub, cycle themes, or wire it to autostart so it is there every login.</p></div></li>
+      </ol>
+      <a class="btn btn-ghost" style="margin-top:26px" href="https://github.com/GbadeboMotunrayo/Rayo#readme" target="_blank" rel="noopener">Read the full guide</a>
+    </div>
+  </div>
+</section>
+
+<section class="donate">
+  <div class="wrap reveal">
+    <h2 class="h2">Free forever. Fueled by tips.</h2>
+    <p class="lead" style="margin-left:auto;margin-right:auto">Rayo costs nothing and always will. If it made your desktop cooler, a small tip funds new hero themes and build time.</p>
+    <div class="btns">
+      <a class="btn btn-primary" href="https://ko-fi.com/motunrayogbadebo" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7-4.35-9.5-8.5C.5 8.5 3 5 6.5 5 8.7 5 10.3 6.4 12 8c1.7-1.6 3.3-3 5.5-3C21 5 23.5 8.5 21.5 12.5 19 16.65 12 21 12 21z"/></svg>
+        Support on Ko-fi
+      </a>
+      <a class="btn btn-ghost" href="https://github.com/GbadeboMotunrayo/Rayo" target="_blank" rel="noopener">Star on GitHub</a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <a class="brand" href="#top"><img src="assets/rayo-mark.svg" alt="" width="26" height="26"><span>R<b>A</b>YO</span></a>
+    <div class="fl">
+      <a href="https://github.com/GbadeboMotunrayo/Rayo" target="_blank" rel="noopener">GitHub</a>
+      <a href="hud/index.html" target="_blank" rel="noopener">Live demo</a>
+      <a href="https://ko-fi.com/motunrayogbadebo" target="_blank" rel="noopener">Donate</a>
+      <span class="mono">MIT · by MG Holdings</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+  // theme pills switch the live demo iframe (reloads with ?theme=)
+  const demo = document.getElementById('demo');
+  const pills = document.getElementById('pills');
+  pills.addEventListener('click', (e) => {
+    const b = e.target.closest('button'); if (!b) return;
+    pills.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x === b));
+    demo.src = 'hud/index.html?theme=' + b.dataset.theme;
+  });
+
+  // copy the install command
+  const copy = document.getElementById('copybtn');
+  copy.addEventListener('click', async () => {
+    const text = 'git clone https://github.com/GbadeboMotunrayo/Rayo.git\ncd Rayo && ./start.sh';
+    try { await navigator.clipboard.writeText(text); copy.textContent = 'copied'; setTimeout(() => copy.textContent = 'copy', 1600); }
+    catch (e) { copy.textContent = 'select + copy'; }
+  });
+
+  // scroll reveal (IntersectionObserver, reduced-motion safe via CSS)
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(en => { if (en.isIntersecting) { en.target.classList.add('in'); io.unobserve(en.target); } });
+  }, { threshold: 0.12 });
+  document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+</script>
+</body>
+</html>

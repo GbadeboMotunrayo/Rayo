@@ -2,3 +2,5 @@ hud/stats.json
 *.log
 __pycache__/
 .wallpaper.prev
+.brandtmp/
+hud/user.json
