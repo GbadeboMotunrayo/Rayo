@@ -205,6 +205,62 @@ def net_info():
     return round(down), round(up), signal, ssid, (iface or "")
 
 
+# ---- monthly data usage (self-accumulating, survives reboots) --------------
+# There is no built-in "data used this month" counter on Linux (/proc counters
+# reset on reboot / interface down). vnstat would need a daemon + sudo, so we
+# keep our own tally: each tick we add the positive delta of the default iface's
+# rx+tx to a per-month total persisted at ~/.local/share/rayo/usage.json.
+# Caveat: it counts traffic while Rayo is running.
+_USAGE_DIR = os.path.expanduser("~/.local/share/rayo")
+_USAGE_FILE = os.path.join(_USAGE_DIR, "usage.json")
+_usage = {"month": None, "bytes": 0, "last": None, "loaded": False, "flushed": 0.0}
+
+def _iface_total_bytes(iface):
+    for line in read("/proc/net/dev").splitlines():
+        if line.strip().startswith(iface + ":"):
+            p = line.split(":")[1].split()
+            try:
+                return int(p[0]) + int(p[8])      # rx + tx (bytes, since boot)
+            except (IndexError, ValueError):
+                return None
+    return None
+
+def monthly_usage(iface):
+    month = time.strftime("%Y-%m")
+    if not _usage["loaded"]:
+        try:
+            with open(_USAGE_FILE) as f:
+                d = json.load(f)
+            if d.get("month") == month:
+                _usage["bytes"] = int(d.get("bytes", 0))
+        except Exception:
+            pass
+        _usage["loaded"] = True
+        _usage["month"] = month
+    if _usage["month"] != month:                  # new month → reset
+        _usage.update(month=month, bytes=0, last=None)
+    if iface:
+        cur = _iface_total_bytes(iface)
+        if cur is not None:
+            if _usage["last"] is not None:
+                delta = cur - _usage["last"]
+                if delta > 0:                     # ignore counter resets
+                    _usage["bytes"] += delta
+            _usage["last"] = cur
+    now = time.time()
+    if now - _usage["flushed"] > 15:              # flush at most every 15s
+        _usage["flushed"] = now
+        try:
+            os.makedirs(_USAGE_DIR, exist_ok=True)
+            tmp = _USAGE_FILE + ".tmp"
+            with open(tmp, "w") as f:
+                json.dump({"month": _usage["month"], "bytes": _usage["bytes"]}, f)
+            os.replace(tmp, _USAGE_FILE)
+        except Exception:
+            pass
+    return _usage["bytes"]
+
+
 # ---- weather (wttr.in, non-blocking, cached ~15 min) -----------------------
 _wx = {"ts": 0.0, "data": {}, "busy": False}
 def _wx_refresh():
@@ -252,6 +308,7 @@ def sample():
         "batt_status": batt_status, "batt_min": batt_min,
         "fan": fan_rpm, "fan_max": fan_max, "fan_label": fan_label,
         "down": down, "up": up, "signal": signal,
+        "month_bytes": monthly_usage(iface),
         "ssid": ssid or iface or "—", "iface": iface,
         "boot": boot_ms(), "ts": int(time.time() * 1000),
         **weather(),

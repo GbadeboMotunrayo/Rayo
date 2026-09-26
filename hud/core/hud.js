@@ -121,6 +121,7 @@
         signal: this.sig, ssid: this.ssid, freq: this.freq,
         mem_used: '4.6', mem_total: '6.9', disk_used: '124', disk_total: '233',
         down: this.down, up: this.up, boot: this.boot, mock: true,
+        month_bytes: (this.monthB = (this.monthB || 8.4e9) + this.down + this.up),
         // fan tracks cpu load: idle ~2500, busy → toward 8100
         fan: Math.round(2400 + this.cpu / 100 * 5200), fan_max: 8100, fan_label: 'CPU FAN',
         wx_temp: '+27°C', wx_cond: 'Partly cloudy', wx_loc: 'Lagos', wx_feels: '+30°C'
@@ -147,6 +148,14 @@
     if (bytes < 1024) return `${bytes.toFixed(0)} B`;
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KiB`;
     return `${(bytes / 1024 / 1024).toFixed(1)} MiB`;
+  };
+  // cumulative totals (month usage): scale up to GiB/TiB
+  const fmtTotal = (bytes) => {
+    if (bytes == null || isNaN(bytes)) return '—';
+    const gib = bytes / 1073741824;
+    if (gib >= 1024) return `${(gib / 1024).toFixed(2)} TiB`;
+    if (gib >= 1) return `${gib.toFixed(2)} GiB`;
+    return `${(bytes / 1048576).toFixed(0)} MiB`;
   };
   const fmtDur = (min) => {
     if (min == null) return '';
@@ -218,6 +227,7 @@
     $('t-ssid').textContent = d.ssid.length > 22 ? d.ssid.slice(0, 21) + '…' : d.ssid;
     $('t-down').textContent = fmtRate(d.down);
     $('t-up').textContent = fmtRate(d.up);
+    if ($('t-month')) $('t-month').textContent = fmtTotal(d.month_bytes);
     $('t-up2').textContent = fmtUptime(d.boot);
 
     // fan speedometer

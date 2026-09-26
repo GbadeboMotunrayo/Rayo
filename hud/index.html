@@ -270,8 +270,8 @@ body{
 #net{top:356px}
 #weather{top:474px}
 
-/* right telemetry */
-.right{right:52px;top:150px;width:320px}
+/* right telemetry — top-aligned with the left cluster (PWR.GRID) */
+.right{right:52px;top:120px;width:320px}
 .tele-row{display:flex;align-items:baseline;justify-content:space-between;margin:9px 0;font-size:12.5px}
 .tele-row .k{color:var(--muted);letter-spacing:.5px}
 .tele-row .v{font-family:var(--font-mono);color:var(--paper)}
@@ -520,6 +520,7 @@ if (new URLSearchParams(location.search).get('obsSafe') === '1') {
     <div class="tele-row"><span class="k">SSID</span><span class="v" id="t-ssid">—</span></div>
     <div class="tele-row"><span class="k">DOWN</span><span class="v ice" id="t-down">—</span></div>
     <div class="tele-row"><span class="k">UP</span><span class="v ice" id="t-up">—</span></div>
+    <div class="tele-row"><span class="k">THIS MONTH</span><span class="v ice" id="t-month">—</span></div>
     <div class="tele-sec">UPTIME</div>
     <div class="tele-row"><span class="k">SINCE BOOT</span><span class="v" id="t-up2">—</span></div>
 
