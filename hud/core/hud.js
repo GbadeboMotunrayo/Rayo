@@ -209,81 +209,67 @@
   // ---- render --------------------------------------------------------------
   function paintBar(el, v) { el.style.width = clamp(v, 0, 100).toFixed(1) + '%'; }
 
+  function setGauge(gid, nid, v) {
+    const g = $(gid); if (g) g.style.setProperty('--p', clamp(v, 0, 100).toFixed(1));
+    const n = $(nid); if (n) n.textContent = Math.round(v);
+  }
+
   function render(d) {
-    // left cluster
+    // honest data-source badge (LIVE / STALE / SIM)
+    const src = $('data-src');
+    if (src) {
+      const stale = !d.mock && d.ts && (Date.now() - d.ts > 5000);
+      src.textContent = d.mock ? 'SIM' : stale ? 'STALE' : 'LIVE';
+      src.classList.toggle('sim', !!(d.mock || stale));
+    }
+
+    // power / capacity
     const batt = d.battery;
-    $('pwr-v').innerHTML = `${Math.round(batt)}<span class="u">%</span>`;
-    $('pwr-a').textContent = battLabel(d);
-    // battery card glows gold while charging
-    $('pwr').classList.toggle('charging', !!d.charging && d.batt_status !== 'Full');
-    paintBar($('pwr-b'), batt);
+    if ($('pwr-v')) $('pwr-v').textContent = `${Math.round(batt)}%`;
+    if ($('pwr-a')) $('pwr-a').textContent = battLabel(d);
+    if ($('pwr')) $('pwr').classList.toggle('charging', !!d.charging && d.batt_status !== 'Full');
+    if ($('pwr-b')) paintBar($('pwr-b'), batt);
+    if ($('t-month')) $('t-month').textContent = fmtTotal(d.month_bytes);
 
-    const cpu = d.cpu;
-    $('sys-v').innerHTML = `${Math.round(cpu)}<span class="u">%</span>`;
-    $('sys-a').textContent = `${d.freq} GHz`;
-    paintBar($('sys-b'), cpu);
+    // vitals arc gauges
+    const cpu = d.cpu, mem = d.mem, disk = d.disk;
+    setGauge('sys-g', 'sys-v', cpu); if ($('sys-a')) $('sys-a').textContent = `${d.freq} GHz`;
+    setGauge('mem-g', 'mem-v', mem); if ($('mem-a')) $('mem-a').textContent = `${d.mem_used} / ${d.mem_total} GiB`;
+    setGauge('disk-g', 'disk-v', disk); if ($('disk-a')) $('disk-a').textContent = `${d.disk_used} / ${d.disk_total} GiB`;
 
-    const sig = d.signal;
-    $('net-v').innerHTML = `${Math.round(sig)}<span class="u">%</span>`;
-    $('net-a').textContent = d.ssid.length > 18 ? d.ssid.slice(0, 17) + '…' : d.ssid;
-    paintBar($('net-b'), sig);
-
-    // weather tile
+    // weather orb
     const clean = (s) => (s || '').replace('+', '');
     if ($('wx-t')) {
       $('wx-t').textContent = clean(d.wx_temp) || '—';
       $('wx-c').textContent = d.wx_cond || '—';
-      // hide location when wttr returns raw coordinates instead of a city name
       const loc = d.wx_loc || '';
-      $('wx-loc').textContent = /^[\d.,\s-]+$/.test(loc) ? '' : loc.split(',')[0];
-      $('wx-fl').textContent = d.wx_feels ? 'feels ' + clean(d.wx_feels) : '';
+      if ($('wx-loc')) $('wx-loc').textContent = /^[\d.,\s-]+$/.test(loc) ? '' : loc.split(',')[0];
+      if ($('wx-fl')) $('wx-fl').textContent = d.wx_feels ? 'feels ' + clean(d.wx_feels) : '';
     }
 
-    // right telemetry
-    $('t-cpu').textContent = Math.round(cpu);
-    $('t-freq').textContent = `${d.freq} GHz`;
-    paintBar($('t-cpu-b'), cpu);
-    const mem = d.mem;
-    $('t-mem').textContent = Math.round(mem);
-    $('t-memx').textContent = `${d.mem_used} / ${d.mem_total} GiB`;
-    paintBar($('t-mem-b'), mem);
-    const disk = d.disk;
-    $('t-disk').textContent = Math.round(disk);
-    $('t-diskx').textContent = `${d.disk_used} / ${d.disk_total} GiB`;
-    paintBar($('t-disk-b'), disk);
-    $('t-ssid').textContent = d.ssid.length > 22 ? d.ssid.slice(0, 21) + '…' : d.ssid;
-    $('t-down').textContent = fmtRate(d.down);
-    $('t-up').textContent = fmtRate(d.up);
-    if ($('t-month')) $('t-month').textContent = fmtTotal(d.month_bytes);
-    $('t-up2').textContent = fmtUptime(d.boot);
+    // network
+    if ($('t-ssid')) $('t-ssid').textContent = d.ssid.length > 20 ? d.ssid.slice(0, 19) + '…' : d.ssid;
+    if ($('t-down')) $('t-down').textContent = fmtRate(d.down);
+    if ($('t-up')) $('t-up').textContent = fmtRate(d.up);
+    if ($('t-up2')) $('t-up2').textContent = fmtUptime(d.boot);
 
     // fan speedometer
     updateGauge(d.fan, d.fan_max, d.fan_label);
 
-    // honest data-source badge:
-    //   LIVE  — real bridge, fresh (<5s old)
-    //   STALE — real file but the bridge stopped writing (data is old!)
-    //   SIM   — no bridge file at all, showing mock
-    const src = $('data-src');
-    if (src) {
-      const stale = !d.mock && d.ts && (Date.now() - d.ts > 5000);
-      src.textContent = d.mock ? 'SIM · NO BRIDGE' : stale ? 'STALE · BRIDGE DOWN' : 'LIVE';
-      src.classList.toggle('sim', !!(d.mock || stale));
-    }
-
-    // hub reacts to CPU load by GLOWING faster/brighter (never rotating):
-    // heavier load → quicker bright↔dim pulse on the core and blades.
-    const pulse = (3 - cpu / 100 * 1.6).toFixed(2) + 's';   // 3s idle → ~1.4s busy
-    const orb = document.querySelector('.orb .core');
-    if (orb) orb.style.animationDuration = pulse;
-    const blades = document.querySelector('.blades');
-    if (blades) blades.style.animationDuration = pulse;
+    // hub reacts to CPU load by pulsing faster/brighter
+    const pulse = (3 - cpu / 100 * 1.6).toFixed(2) + 's';
+    const orb = document.querySelector('.orb .core'); if (orb) orb.style.animationDuration = pulse;
+    const blades = document.querySelector('.blades'); if (blades) blades.style.animationDuration = pulse;
   }
 
   function clock() {
     const n = new Date();
     const p = (x) => String(x).padStart(2, '0');
-    $('t-time').textContent = `${p(n.getHours())}:${p(n.getMinutes())}:${p(n.getSeconds())}`;
+    if ($('t-time')) $('t-time').textContent = `${p(n.getHours())}:${p(n.getMinutes())}`;
+    const mon = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+    const day = ['SUNDAY','MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY','SATURDAY'];
+    if ($('cd-date')) $('cd-date').textContent = `${mon[n.getMonth()]} ${n.getDate()}`;
+    if ($('cd-day')) $('cd-day').textContent = day[n.getDay()];
   }
 
   // ---- loops ---------------------------------------------------------------

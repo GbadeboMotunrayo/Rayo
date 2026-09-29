@@ -1,0 +1,159 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">
+<title>Rayo Concept B — Redesign Bench</title>
+<style>
+:root{--ice:#78d2ee;--ice-b:#a6ecff;--ice-d:#2b7f99;--ink:#03060a;--paper:#cfeaf5;--muted:#5a7481;
+  --mono:ui-monospace,"JetBrains Mono","SF Mono",monospace;--rgb:120 210 238}
+*{margin:0;box-sizing:border-box}
+body{width:1600px;height:900px;overflow:hidden;background:
+  radial-gradient(70% 90% at 68% 50%, #071119, var(--ink) 70%);color:var(--paper);
+  font-family:var(--mono);position:relative}
+/* diagonal blueprint grid */
+.grid{position:absolute;inset:0;opacity:.5;
+  background:
+    repeating-linear-gradient(0deg, rgb(var(--rgb)/.05) 0 1px, transparent 1px 60px),
+    repeating-linear-gradient(90deg, rgb(var(--rgb)/.05) 0 1px, transparent 1px 60px)}
+.scan{position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent 0 3px, rgb(0 0 0/.18) 3px 4px);pointer-events:none}
+.br{position:absolute;width:46px;height:46px;border:1px solid rgb(var(--rgb)/.45)}
+.br.tl{top:22px;left:22px;border-right:0;border-bottom:0}
+.br.tr{top:22px;right:22px;border-left:0;border-bottom:0}
+.br.bl{bottom:22px;left:22px;border-right:0;border-top:0}
+.br.br2{bottom:22px;right:22px;border-left:0;border-top:0}
+.glow{filter:drop-shadow(0 0 6px rgb(var(--rgb)/.7))}
+
+/* header */
+.head{position:absolute;top:46px;left:64px}
+.head h1{font-size:30px;font-weight:800;letter-spacing:6px;color:var(--paper)}
+.head h1 b{color:var(--ice);text-shadow:0 0 14px rgb(var(--rgb)/.7)}
+.head .sub{font-size:11px;letter-spacing:5px;color:var(--muted);margin-top:8px}
+.head .tag{margin-top:16px;display:inline-block;font-size:10px;letter-spacing:3px;color:var(--ice);
+  border:1px solid rgb(var(--rgb)/.4);border-radius:20px;padding:5px 12px}
+
+/* LEFT diagnostics spine */
+.diag{position:absolute;left:64px;top:210px;width:300px}
+.diag .sec{font-size:10px;letter-spacing:3px;color:var(--muted);margin:22px 0 12px;border-bottom:1px solid rgb(var(--rgb)/.15);padding-bottom:6px}
+.diag .row{display:flex;justify-content:space-between;align-items:center;font-size:12px;margin:10px 0}
+.diag .row .k{color:var(--muted);letter-spacing:1px}
+.diag .row .v{color:var(--ice-b)}
+.diag .row .v.ok{color:#7fe3b0}
+.diag .mbar{height:4px;background:rgb(var(--rgb)/.1);border-radius:3px;margin-top:6px;position:relative}
+.diag .mbar i{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,var(--ice-d),var(--ice));border-radius:3px;box-shadow:0 0 8px rgb(var(--rgb)/.6)}
+
+/* central schematic */
+.stage{position:absolute;right:120px;top:50%;transform:translateY(-50%)}
+svg{overflow:visible}
+.wire{fill:none;stroke:rgb(var(--rgb)/.55);stroke-width:1}
+.wire.dim{stroke:rgb(var(--rgb)/.22)}
+.wire.hot{stroke:var(--ice-b);stroke-width:1.5;filter:drop-shadow(0 0 5px rgb(var(--rgb)/.8))}
+.spin{transform-origin:400px 400px;animation:rot 40s linear infinite}
+.spin.rev{animation-duration:60s;animation-direction:reverse}
+@keyframes rot{to{transform:rotate(360deg)}}
+.corelabel{font-family:var(--mono);fill:var(--ice-b);font-size:13px;letter-spacing:1px}
+
+/* callouts */
+.callout{position:absolute;font-size:11px;letter-spacing:1px}
+.callout .k{color:var(--ice);text-shadow:0 0 8px rgb(var(--rgb)/.6)}
+.callout .v{color:var(--paper);font-size:14px;margin-top:2px}
+.callout .u{color:var(--muted);font-size:10px}
+.lead{position:absolute;height:1px;background:linear-gradient(90deg,rgb(var(--rgb)/.6),transparent);}
+.node{position:absolute;width:7px;height:7px;border-radius:50%;background:var(--ice);box-shadow:0 0 8px var(--ice)}
+
+/* bottom command line */
+.cli{position:absolute;left:64px;bottom:60px;width:640px;font-size:12px;color:var(--muted)}
+.cli .line{margin:4px 0}
+.cli .p{color:var(--ice)}
+.cli .cur{display:inline-block;width:8px;height:14px;background:var(--ice);vertical-align:-2px;animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+.wm{position:absolute;right:64px;bottom:44px;font-size:12px;letter-spacing:5px;color:var(--paper);font-weight:700}
+.status{position:absolute;right:64px;bottom:70px;font-size:10px;letter-spacing:2px;color:var(--ice)}
+</style></head>
+<body>
+<div class="grid"></div>
+<div class="br tl"></div><div class="br tr"></div><div class="br bl"></div><div class="br br2"></div>
+
+<div class="head">
+  <h1>RAYO<b>//</b>BENCH</h1>
+  <div class="sub">STRUCTURAL ANALYSIS · MK II</div>
+  <div class="tag">◇ RECONFIGURING</div>
+</div>
+
+<!-- LEFT diagnostics -->
+<div class="diag">
+  <div class="sec">CORE DIAGNOSTICS</div>
+  <div class="row"><span class="k">PROCESSOR</span><span class="v">18% · 1.28GHz</span></div>
+  <div class="mbar"><i style="width:18%"></i></div>
+  <div class="row"><span class="k">MEMORY</span><span class="v">74% · 5.1G</span></div>
+  <div class="mbar"><i style="width:74%"></i></div>
+  <div class="row"><span class="k">THERMAL</span><span class="v ok">52°C STABLE</span></div>
+  <div class="mbar"><i style="width:52%"></i></div>
+  <div class="sec">FLIGHT SYSTEMS</div>
+  <div class="row"><span class="k">POWER CELL</span><span class="v">80%</span></div>
+  <div class="row"><span class="k">UPLINK</span><span class="v ok">SECURE</span></div>
+  <div class="row"><span class="k">DATA / MONTH</span><span class="v">12.4 GiB</span></div>
+  <div class="sec">INTEGRITY</div>
+  <div class="row"><span class="k">FRAME</span><span class="v ok">100%</span></div>
+  <div class="row"><span class="k">DIAGNOSTICS</span><span class="v ok">PASS · 0 FAULTS</span></div>
+</div>
+
+<!-- CENTRAL wireframe schematic -->
+<div class="stage">
+  <svg width="800" height="800" viewBox="0 0 800 800">
+    <!-- outer spinning frame -->
+    <g class="spin">
+      <circle class="wire dim" cx="400" cy="400" r="330"/>
+      <polygon class="wire" points="400,80 680,240 680,560 400,720 120,560 120,240"/>
+      <g class="wire dim">
+        <line x1="400" y1="70" x2="400" y2="730"/><line x1="110" y1="235" x2="690" y2="565"/><line x1="110" y1="565" x2="690" y2="235"/>
+      </g>
+      <circle class="wire hot" cx="400" cy="70" r="5"/><circle class="wire hot" cx="690" cy="240" r="5"/>
+      <circle class="wire hot" cx="120" cy="560" r="5"/>
+    </g>
+    <!-- mid spinning ring w/ ticks -->
+    <g class="spin rev">
+      <circle class="wire" cx="400" cy="400" r="250"/>
+      <g class="wire dim">
+        <script/>
+      </g>
+      <circle class="wire hot" cx="400" cy="150" r="4"/><circle class="wire hot" cx="650" cy="400" r="4"/>
+      <path class="wire hot" d="M400 400 m -250 0 a 250 250 0 0 1 120 -216" />
+    </g>
+    <!-- wire sphere (3D core) -->
+    <g>
+      <circle class="wire" cx="400" cy="400" r="150"/>
+      <ellipse class="wire dim" cx="400" cy="400" rx="150" ry="52"/>
+      <ellipse class="wire dim" cx="400" cy="400" rx="150" ry="100"/>
+      <ellipse class="wire dim" cx="400" cy="400" rx="52" ry="150"/>
+      <ellipse class="wire dim" cx="400" cy="400" rx="100" ry="150"/>
+      <circle cx="400" cy="400" r="46" fill="rgb(120 210 238 / .18)"/>
+      <circle class="wire hot" cx="400" cy="400" r="46"/>
+      <circle cx="400" cy="400" r="20" fill="var(--ice-b)" class="glow"/>
+    </g>
+    <text class="corelabel" x="400" y="600" text-anchor="middle">ARC CORE · 3.2 GW</text>
+  </svg>
+</div>
+
+<!-- callouts w/ leader lines -->
+<div class="callout" style="right:560px;top:210px;text-align:right"><div class="k">ALLOY</div><div class="v">GOLD-TITANIUM</div><div class="u">tensile 1120 MPa</div></div>
+<div class="lead" style="right:470px;top:238px;width:120px;transform:rotate(18deg)"></div>
+<div class="node" style="right:452px;top:276px"></div>
+
+<div class="callout" style="left:1180px;top:300px"><div class="k">THRUST</div><div class="v">480 kN · OPTIMAL</div><div class="u">repulsor array</div></div>
+<div class="lead" style="left:1080px;top:326px;width:110px;transform:rotate(-14deg)"></div>
+<div class="node" style="left:1062px;top:300px"></div>
+
+<div class="callout" style="left:1180px;top:520px"><div class="k">STABILITY</div><div class="v">GYRO LOCKED</div><div class="u">flight surfaces nominal</div></div>
+<div class="lead" style="left:1070px;top:512px;width:120px;transform:rotate(16deg)"></div>
+<div class="node" style="left:1052px;top:544px"></div>
+
+<div class="callout" style="right:560px;top:560px;text-align:right"><div class="k">SHELL TEMP</div><div class="v">52°C</div><div class="u">within tolerance</div></div>
+<div class="lead" style="right:470px;top:556px;width:120px;transform:rotate(-16deg)"></div>
+<div class="node" style="right:452px;top:520px"></div>
+
+<!-- bottom CLI -->
+<div class="cli">
+  <div class="line"><span class="p">jarvis&gt;</span> run structural_analysis --target mk2</div>
+  <div class="line" style="color:#7fe3b0">✓ frame integrity 100% · 0 faults detected</div>
+  <div class="line"><span class="p">jarvis&gt;</span> recalibrating flight surfaces<span class="cur"></span></div>
+</div>
+<div class="status">◇ SYSTEMS NOMINAL · SECURE LINK</div>
+<div class="wm">MG&nbsp;HOLDINGS</div>
+</body></html>

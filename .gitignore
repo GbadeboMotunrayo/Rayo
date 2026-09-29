@@ -4,3 +4,5 @@ __pycache__/
 .wallpaper.prev
 .brandtmp/
 hud/user.json
+
+concepts/*.png

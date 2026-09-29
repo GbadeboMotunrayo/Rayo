@@ -114,6 +114,11 @@
     b.addEventListener('click', (e) => { e.stopPropagation(); doAction(b.dataset.act); });
   });
 
+  // Command Deck: launchers + power buttons run their whitelisted action
+  document.querySelectorAll('.launch .it, .powerbtns button').forEach((el) => {
+    el.addEventListener('click', (e) => { e.stopPropagation(); doAction(el.dataset.act); });
+  });
+
   // clicking empty space (or pressing Esc) dismisses everything
   document.addEventListener('click', closeAll);
   document.addEventListener('keydown', (e) => {

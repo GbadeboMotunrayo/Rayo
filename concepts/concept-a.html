@@ -1,0 +1,183 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">
+<title>Rayo Concept A — Command Deck</title>
+<style>
+:root{--ice:#78d2ee;--ice-b:#a6ecff;--ice-d:#1f6f86;--ink:#04060a;--paper:#cfeaf5;--muted:#5f7a87;
+  --mono:ui-monospace,"JetBrains Mono","SF Mono",monospace;--rgb:120 210 238}
+*{margin:0;box-sizing:border-box}
+body{width:1600px;height:900px;overflow:hidden;background:var(--ink);color:var(--paper);
+  font-family:var(--mono);position:relative}
+.grid{position:absolute;inset:0;
+  background:
+    radial-gradient(45% 55% at 50% 52%, rgb(var(--rgb)/.10), transparent 62%),
+    linear-gradient(rgb(var(--rgb)/.04) 1px,transparent 1px),
+    linear-gradient(90deg,rgb(var(--rgb)/.04) 1px,transparent 1px);
+  background-size:auto,42px 42px,42px 42px;
+  -webkit-mask:radial-gradient(80% 80% at 50% 50%,#000 60%,transparent 100%)}
+.glow{text-shadow:0 0 8px rgb(var(--rgb)/.7)}
+.lbl{font-size:10px;letter-spacing:2px;color:var(--muted);text-transform:uppercase}
+.val{color:var(--ice-b)}
+/* corner brackets */
+.br{position:absolute;width:54px;height:54px;border:2px solid rgb(var(--rgb)/.5)}
+.br.tl{top:20px;left:20px;border-right:0;border-bottom:0}
+.br.tr{top:20px;right:20px;border-left:0;border-bottom:0}
+.br.bl{bottom:20px;left:20px;border-right:0;border-top:0}
+.br.br2{bottom:20px;right:20px;border-left:0;border-top:0}
+/* rings helper */
+.ring{position:absolute;border-radius:50%;
+  -webkit-mask:radial-gradient(circle, transparent var(--i), #000 calc(var(--i) + .5px), #000 var(--o), transparent calc(var(--o) + 1px));
+  mask:radial-gradient(circle, transparent var(--i), #000 calc(var(--i) + .5px), #000 var(--o), transparent calc(var(--o) + 1px))}
+.arc{background:conic-gradient(from var(--f,0deg), var(--ice-b), var(--ice) 60deg, rgb(var(--rgb)/.1) 130deg, transparent 180deg)}
+.full{background:conic-gradient(rgb(var(--rgb)/.28), rgb(var(--rgb)/.28))}
+.ticks{background:repeating-conic-gradient(rgb(var(--rgb)/.55) 0 .5deg, transparent .5deg 5deg)}
+
+/* ---------- top status strip ---------- */
+.topbar{position:absolute;top:30px;left:50%;transform:translateX(-50%);display:flex;gap:26px;
+  font-size:11px;letter-spacing:2px;color:var(--muted)}
+.topbar b{color:var(--ice)}
+.dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--ice);box-shadow:0 0 8px var(--ice);margin-right:6px}
+
+/* ---------- LEFT: clock + vitals ---------- */
+.clock{position:absolute;left:70px;top:96px;width:230px;height:230px}
+.clock .ring{inset:0;margin:auto}
+.clock .time{position:absolute;inset:0;display:grid;place-content:center;text-align:center}
+.clock .time .h{font-size:46px;font-weight:800;color:var(--paper);line-height:1}
+.clock .time .d{font-size:12px;letter-spacing:3px;color:var(--ice);margin-top:6px}
+.clock .time .w{font-size:10px;letter-spacing:2px;color:var(--muted);margin-top:2px}
+
+.vitals{position:absolute;left:60px;top:360px;width:250px}
+.mini{display:flex;align-items:center;gap:14px;margin-bottom:16px}
+.mini .g{position:relative;width:64px;height:64px;flex:none}
+.mini .g .ring{inset:0}
+.mini .g .n{position:absolute;inset:0;display:grid;place-content:center;font-size:15px;font-weight:700;color:var(--ice-b)}
+.mini .t .k{font-size:11px;letter-spacing:2px;color:var(--muted)}
+.mini .t .v{font-size:13px;color:var(--paper);margin-top:2px}
+
+.cap{position:absolute;left:60px;top:600px;width:250px}
+.cap .row{display:flex;justify-content:space-between;font-size:11px;margin:14px 0 6px}
+.cap .row .val{color:var(--ice-b)}
+.bar{height:6px;border-radius:4px;background:rgb(var(--rgb)/.1);position:relative;overflow:hidden}
+.bar i{position:absolute;left:0;top:0;bottom:0;border-radius:4px;
+  background:linear-gradient(90deg,var(--ice-d),var(--ice));box-shadow:0 0 10px rgb(var(--rgb)/.6)}
+
+/* ---------- CENTER reactor ---------- */
+.reactor{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:520px;height:520px}
+.reactor::before{content:"";position:absolute;inset:-60px;border-radius:50%;
+  background:radial-gradient(circle, rgb(var(--rgb)/.20), rgb(var(--rgb)/.05) 45%, transparent 70%)}
+.reactor .ring{inset:0;margin:auto}
+.core{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:150px;height:150px;border-radius:50%;
+  background:radial-gradient(circle at 36% 30%, #eafbff, var(--ice-b) 26%, var(--ice) 56%, #0b3a49 100%);
+  box-shadow:0 0 60px 10px rgb(var(--rgb)/.45), inset 0 0 40px rgb(255 255 255/.35)}
+.blades{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:210px;height:210px;border-radius:50%;
+  background:repeating-conic-gradient(var(--ice) 0 3deg, transparent 3deg 30deg);
+  -webkit-mask:radial-gradient(circle, transparent 78px, #000 80px, #000 100px, transparent 102px);opacity:.85}
+.cardinal{position:absolute;font-size:10px;color:rgb(var(--rgb)/.6)}
+
+/* ---------- RIGHT: weather + launchers ---------- */
+.weather{position:absolute;right:80px;top:96px;width:150px;height:150px}
+.weather .ring{inset:0}
+.weather .t{position:absolute;inset:0;display:grid;place-content:center;text-align:center}
+.weather .t .deg{font-size:34px;font-weight:800;color:var(--paper)}
+.weather .t .c{font-size:10px;letter-spacing:2px;color:var(--ice)}
+
+.launch{position:absolute;right:70px;top:300px;width:200px}
+.launch .item{display:flex;align-items:center;justify-content:flex-end;gap:12px;height:30px;font-size:13px;color:var(--paper)}
+.launch .item::after{content:"";width:7px;height:7px;border-radius:50%;background:var(--ice);box-shadow:0 0 8px var(--ice)}
+.launch .item:hover{color:var(--ice-b)}
+.launch .rail{position:absolute;right:3px;top:14px;bottom:14px;width:1px;background:linear-gradient(rgb(var(--rgb)/.5),transparent)}
+
+/* ---------- BOTTOM ---------- */
+.media{position:absolute;left:70px;bottom:70px;width:340px}
+.media .np{font-size:12px;color:var(--paper)}
+.media .np b{color:var(--ice)}
+.media .wave{display:flex;align-items:flex-end;gap:3px;height:34px;margin-top:12px}
+.media .wave span{width:4px;background:linear-gradient(var(--ice-b),var(--ice-d));border-radius:2px;box-shadow:0 0 6px rgb(var(--rgb)/.5)}
+
+.power{position:absolute;right:70px;bottom:70px;display:flex;gap:12px}
+.power button{background:rgb(var(--rgb)/.06);border:1px solid rgb(var(--rgb)/.35);color:var(--ice);
+  padding:12px 18px;border-radius:10px;font-family:var(--mono);font-size:11px;letter-spacing:2px}
+.power button.danger{border-color:rgb(229 72 77/.5);color:#ff9a9d}
+
+.ip{position:absolute;left:50%;bottom:40px;transform:translateX(-50%);font-size:11px;letter-spacing:3px;color:var(--muted)}
+.wm{position:absolute;left:70px;bottom:36px;font-size:13px;letter-spacing:5px;color:var(--paper);font-weight:700}
+</style></head>
+<body>
+<div class="grid"></div>
+<div class="br tl"></div><div class="br tr"></div><div class="br bl"></div><div class="br br2"></div>
+
+<div class="topbar"><span><span class="dot"></span>RAYO ONLINE</span><span>SYS <b>NOMINAL</b></span><span>SECURE LINK <b>ACTIVE</b></span><span>THREAT <b>NONE</b></span></div>
+
+<!-- LEFT clock -->
+<div class="clock">
+  <div class="ring full" style="--i:104px;--o:112px"></div>
+  <div class="ring arc glow" style="--i:104px;--o:112px;--f:20deg"></div>
+  <div class="ring full" style="--i:86px;--o:90px"></div>
+  <div class="ring arc" style="--i:86px;--o:90px;--f:200deg"></div>
+  <div class="ring ticks" style="--i:70px;--o:80px"></div>
+  <div class="time"><div class="h">09:57</div><div class="d">AUGUST 24</div><div class="w">FRIDAY</div></div>
+</div>
+
+<!-- LEFT vitals -->
+<div class="vitals">
+  <div class="mini"><div class="g"><div class="ring full" style="--i:26px;--o:31px"></div><div class="ring arc glow" style="--i:26px;--o:31px;--f:40deg"></div><div class="n">18</div></div><div class="t"><div class="k">SYS.CORE</div><div class="v">1.28 GHz · 8 threads</div></div></div>
+  <div class="mini"><div class="g"><div class="ring full" style="--i:26px;--o:31px"></div><div class="ring arc glow" style="--i:26px;--o:31px;--f:250deg"></div><div class="n">74</div></div><div class="t"><div class="k">MEMORY</div><div class="v">5.1 / 6.9 GiB</div></div></div>
+  <div class="mini"><div class="g"><div class="ring full" style="--i:26px;--o:31px"></div><div class="ring arc glow" style="--i:26px;--o:31px;--f:180deg"></div><div class="n">57</div></div><div class="t"><div class="k">STORAGE</div><div class="v">132 / 233 GiB</div></div></div>
+</div>
+
+<!-- LEFT capacity/power -->
+<div class="cap">
+  <div class="row"><span class="lbl">POWER GRID</span><span class="val">80% · 4h 12m</span></div>
+  <div class="bar"><i style="width:80%"></i></div>
+  <div class="row"><span class="lbl">DATA THIS MONTH</span><span class="val">12.4 GiB</span></div>
+  <div class="bar"><i style="width:41%"></i></div>
+</div>
+
+<!-- CENTER reactor -->
+<div class="reactor">
+  <div class="ring full" style="--i:250px;--o:258px"></div>
+  <div class="ring arc glow" style="--i:250px;--o:258px;--f:10deg"></div>
+  <div class="ring ticks" style="--i:224px;--o:236px"></div>
+  <div class="ring full" style="--i:190px;--o:196px"></div>
+  <div class="ring arc" style="--i:190px;--o:196px;--f:160deg"></div>
+  <div class="ring arc glow" style="--i:150px;--o:158px;--f:300deg"></div>
+  <span class="cardinal" style="top:6px;left:50%;transform:translateX(-50%)">000</span>
+  <span class="cardinal" style="bottom:6px;left:50%;transform:translateX(-50%)">180</span>
+  <span class="cardinal" style="left:6px;top:50%">270</span>
+  <span class="cardinal" style="right:6px;top:50%">090</span>
+  <div class="blades"></div>
+  <div class="core"></div>
+</div>
+
+<!-- RIGHT weather -->
+<div class="weather">
+  <div class="ring full" style="--i:64px;--o:70px"></div>
+  <div class="ring arc glow" style="--i:64px;--o:70px;--f:120deg"></div>
+  <div class="t"><div class="deg">14°</div><div class="c">CLOUDY</div></div>
+</div>
+
+<!-- RIGHT launchers -->
+<div class="launch">
+  <div class="rail"></div>
+  <div class="item">GITHUB</div><div class="item">FIGMA</div><div class="item">TERMINAL</div>
+  <div class="item">BROWSER</div><div class="item">FILES</div><div class="item">SETTINGS</div>
+  <div class="item">MUSIC</div><div class="item">MAIL</div>
+</div>
+
+<!-- BOTTOM media -->
+<div class="media">
+  <div class="np">NOW PLAYING · <b>Vindsvept — Voyage</b></div>
+  <div class="wave" id="wave"></div>
+</div>
+
+<!-- BOTTOM power -->
+<div class="power">
+  <button>LOG OFF</button><button>RESTART</button><button class="danger">SHUTDOWN</button>
+</div>
+
+<div class="ip">10.0.11.42 · wlp0s20f3 · ↓ 4.2 MiB/s  ↑ 512 KiB/s</div>
+<div class="wm glow">MG&nbsp;HOLDINGS</div>
+
+<script>
+const w=document.getElementById('wave');
+for(let i=0;i<48;i++){const s=document.createElement('span');s.style.height=(6+Math.abs(Math.sin(i*.5))*28).toFixed(0)+'px';w.appendChild(s);}
+</script>
+</body></html>
