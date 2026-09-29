@@ -530,6 +530,55 @@ html.rayo-idle *::after{animation-play-state:paused!important}
 .vitals{top:404px}
 .cooling{left:50%;transform:translateX(-50%);bottom:52px}
 .netblk{left:100px;bottom:150px}
+
+/* ============================================================
+   BENCH MODE (concept B) — holographic redesign schematic overlay.
+   Double-tap the reactor to summon. Overlay-safe (no CSS filter glows).
+   ============================================================ */
+.bench{position:fixed;inset:0;z-index:60;font-family:var(--font-mono);color:var(--paper);
+  background:radial-gradient(70% 90% at 66% 50%, rgb(var(--ice-rgb)/.07), var(--ink-0) 72%), var(--ink-0);
+  opacity:0;pointer-events:none;transition:opacity .4s ease}
+.bench.open{opacity:1;pointer-events:auto}
+.bench .bgrid{position:absolute;inset:0;opacity:.5;
+  background:repeating-linear-gradient(0deg,rgb(var(--ice-rgb)/.05) 0 1px,transparent 1px 60px),
+             repeating-linear-gradient(90deg,rgb(var(--ice-rgb)/.05) 0 1px,transparent 1px 60px)}
+.bench .bhead{position:absolute;top:52px;left:70px}
+.bench .bhead h1{font-size:30px;font-weight:800;letter-spacing:6px}
+.bench .bhead h1 b{color:var(--ice);text-shadow:0 0 14px rgb(var(--ice-rgb)/.7)}
+.bench .bhead .s{font-size:11px;letter-spacing:5px;color:var(--muted);margin-top:8px}
+.bench .bhead .tag{margin-top:16px;display:inline-block;font-size:10px;letter-spacing:3px;color:var(--ice);
+  border:1px solid rgb(var(--ice-rgb)/.4);border-radius:20px;padding:5px 12px}
+.bench .exit{position:absolute;top:56px;right:70px;font-size:11px;letter-spacing:3px;color:var(--muted);
+  border:1px solid rgb(var(--ice-rgb)/.3);border-radius:20px;padding:8px 16px;cursor:pointer;transition:all .18s}
+.bench .exit:hover{color:var(--ice);border-color:var(--ice);box-shadow:0 0 14px rgb(var(--ice-rgb)/.3)}
+.bench .diag{position:absolute;left:70px;top:210px;width:300px}
+.bench .diag .sec{font-size:10px;letter-spacing:3px;color:var(--muted);margin:22px 0 12px;
+  border-bottom:1px solid rgb(var(--ice-rgb)/.15);padding-bottom:6px}
+.bench .diag .r{display:flex;justify-content:space-between;font-size:12px;margin:10px 0}
+.bench .diag .r .k{color:var(--muted)} .bench .diag .r .v{color:var(--ice-bright)} .bench .diag .r .v.ok{color:#7fe3b0}
+.bench .diag .mb{height:4px;background:rgb(var(--ice-rgb)/.1);border-radius:3px;margin-top:6px;position:relative}
+.bench .diag .mb i{position:absolute;left:0;top:0;bottom:0;width:0%;border-radius:3px;
+  background:linear-gradient(90deg,var(--ice-deep),var(--ice));box-shadow:0 0 8px rgb(var(--ice-rgb)/.6);transition:width .8s}
+.bench .stage2{position:absolute;right:150px;top:50%;transform:translateY(-50%);width:760px;height:760px}
+.bench svg{overflow:visible;width:760px;height:760px}
+.bench .wire{fill:none;stroke:rgb(var(--ice-rgb)/.5);stroke-width:1}
+.bench .wire.dim{stroke:rgb(var(--ice-rgb)/.22)}
+.bench .wire.hot{stroke:var(--ice-bright);stroke-width:1.5}
+.bench .spin{transform-origin:400px 400px;animation:brot 42s linear infinite}
+.bench .spin.rev{animation-duration:64s;animation-direction:reverse}
+@keyframes brot{to{transform:rotate(360deg)}}
+.bench .bcore{position:absolute;left:50%;top:50%;width:110px;height:110px;transform:translate(-50%,-50%);border-radius:50%;
+  background:radial-gradient(circle at 40% 34%, var(--ice-hi), var(--ice-bright) 40%, var(--ice) 70%, var(--ice-deep));
+  box-shadow:0 0 60px 14px rgb(var(--ice-rgb)/.5), inset 0 0 30px rgba(255,255,255,.4);
+  animation:orbPulse 3s ease-in-out infinite}
+.bench .corelbl{position:absolute;left:50%;bottom:120px;transform:translateX(-50%);font-size:13px;
+  letter-spacing:1px;color:var(--ice-bright);white-space:nowrap}
+.bench .co{position:absolute;font-size:11px;letter-spacing:1px}
+.bench .co .k{color:var(--ice);text-shadow:0 0 8px rgb(var(--ice-rgb)/.6)}
+.bench .co .v{color:var(--paper);font-size:15px;margin-top:2px} .bench .co .u{color:var(--muted);font-size:10px}
+.bench .cli{position:absolute;left:70px;bottom:64px;width:640px;font-size:12px;color:var(--muted);line-height:1.7}
+.bench .cli .p{color:var(--ice)}
+.bench .cli .cur{display:inline-block;width:8px;height:13px;background:var(--ice);vertical-align:-2px;animation:blink 1s steps(1) infinite}
 </style>
 <script>
 // OBS Studio's Linux Browser Source (CEF) has a known bug where it flattens
@@ -669,6 +718,66 @@ if (new URLSearchParams(location.search).get('obsSafe') === '1') {
     <div class="sub">CLASS-R · SYSTEMS INTERFACE</div>
   </div>
   <div class="status"><div class="r">R.A.Y.O</div></div>
+</div>
+
+
+<!-- ============ BENCH MODE (double-tap the reactor) ============ -->
+<div class="bench" id="bench" aria-hidden="true">
+  <div class="bgrid"></div>
+  <div class="bhead"><h1>RAYO<b>//</b>BENCH</h1><div class="s">STRUCTURAL ANALYSIS &middot; LIVE</div><div class="tag">&#9671; MONITORING</div></div>
+  <div class="exit" id="bench-exit">&#9671; EXIT BENCH</div>
+
+  <div class="diag">
+    <div class="sec">CORE DIAGNOSTICS</div>
+    <div class="r"><span class="k">PROCESSOR</span><span class="v"><span id="b-cpu">--</span>% &middot; <span id="b-freq">--</span></span></div>
+    <div class="mb"><i id="b-cpu-b"></i></div>
+    <div class="r"><span class="k">MEMORY</span><span class="v"><span id="b-mem">--</span>%</span></div>
+    <div class="mb"><i id="b-mem-b"></i></div>
+    <div class="r"><span class="k">THERMAL</span><span class="v ok" id="b-temp">--</span></div>
+    <div class="mb"><i id="b-temp-b"></i></div>
+    <div class="sec">SYSTEMS</div>
+    <div class="r"><span class="k">POWER CELL</span><span class="v" id="b-pwr">--</span></div>
+    <div class="r"><span class="k">UPLINK</span><span class="v ok" id="b-ssid">SECURE</span></div>
+    <div class="r"><span class="k">DATA / MONTH</span><span class="v" id="b-data">--</span></div>
+    <div class="sec">INTEGRITY</div>
+    <div class="r"><span class="k">FRAME</span><span class="v ok">100%</span></div>
+    <div class="r"><span class="k">DIAGNOSTICS</span><span class="v ok">PASS &middot; 0 FAULTS</span></div>
+  </div>
+
+  <div class="stage2">
+    <svg viewBox="0 0 800 800">
+      <g class="spin">
+        <circle class="wire dim" cx="400" cy="400" r="330"/>
+        <polygon class="wire" points="400,80 680,240 680,560 400,720 120,560 120,240"/>
+        <g class="wire dim"><line x1="400" y1="70" x2="400" y2="730"/><line x1="110" y1="235" x2="690" y2="565"/><line x1="110" y1="565" x2="690" y2="235"/></g>
+        <circle class="wire hot" cx="400" cy="70" r="5"/><circle class="wire hot" cx="690" cy="240" r="5"/><circle class="wire hot" cx="120" cy="560" r="5"/>
+      </g>
+      <g class="spin rev">
+        <circle class="wire" cx="400" cy="400" r="250"/>
+        <circle class="wire hot" cx="400" cy="150" r="4"/><circle class="wire hot" cx="650" cy="400" r="4"/>
+        <path class="wire hot" d="M400 400 m -250 0 a 250 250 0 0 1 120 -216"/>
+      </g>
+      <circle class="wire" cx="400" cy="400" r="150"/>
+      <ellipse class="wire dim" cx="400" cy="400" rx="150" ry="52"/>
+      <ellipse class="wire dim" cx="400" cy="400" rx="150" ry="100"/>
+      <ellipse class="wire dim" cx="400" cy="400" rx="52" ry="150"/>
+      <ellipse class="wire dim" cx="400" cy="400" rx="100" ry="150"/>
+      <circle class="wire hot" cx="400" cy="400" r="46"/>
+    </svg>
+    <div class="bcore"></div>
+    <div class="corelbl">SYSTEM CORE &middot; <span id="b-load">--</span>% LOAD</div>
+  </div>
+
+  <div class="co" style="right:560px;top:250px;text-align:right"><div class="k">CLOCK</div><div class="v" id="b-freq2">--</div><div class="u">processor</div></div>
+  <div class="co" style="left:1150px;top:330px"><div class="k">STORAGE</div><div class="v"><span id="b-disk2">--</span>%</div><div class="u">in use</div></div>
+  <div class="co" style="left:1150px;top:540px"><div class="k">NETWORK</div><div class="v">&#8595; <span id="b-down">--</span></div><div class="u">throughput</div></div>
+  <div class="co" style="right:560px;top:560px;text-align:right"><div class="k">THERMAL</div><div class="v" id="b-temp2">--</div><div class="u">package</div></div>
+
+  <div class="cli">
+    <div><span class="p">rayo&gt;</span> monitor --live</div>
+    <div style="color:#7fe3b0">&#10003; all systems nominal &middot; 0 faults</div>
+    <div><span class="p">rayo&gt;</span> streaming telemetry<span class="cur"></span></div>
+  </div>
 </div>
 
 <script src="core/theme.js"></script>

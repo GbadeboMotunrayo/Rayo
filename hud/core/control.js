@@ -64,6 +64,12 @@
   const closePower = () => { bar.classList.remove('open'); bar.setAttribute('aria-hidden', 'true'); };
   const closeAll   = () => { closeMenu(); closePower(); };
 
+  // ---- Bench mode (holographic schematic, double-tap the hub) --------------
+  const bench = $('bench');
+  const openBench  = () => { if (bench) { bench.classList.add('open'); bench.setAttribute('aria-hidden', 'false'); } };
+  const closeBench = () => { if (bench) { bench.classList.remove('open'); bench.setAttribute('aria-hidden', 'true'); } };
+  const toggleBench = () => { if (bench) bench.classList.contains('open') ? closeBench() : openBench(); };
+
   function doAction(act) {
     // THEME cycles the look in-page and keeps the menu open so you can keep
     // tapping to preview each theme.
@@ -94,7 +100,7 @@
   }
   $('cd-cancel').addEventListener('click', (e) => { e.stopPropagation(); cancelCountdown(); });
 
-  // ---- click-count on the hub: 1 = menu, 2 = power, 3 = shutdown -----------
+  // ---- click-count on the hub: 1 = radial menu, 2 = Bench mode, 3 = shutdown
   const hit = $('hub-hit');
   let clicks = 0, tap = null;
   hit.addEventListener('click', (e) => {
@@ -103,7 +109,7 @@
     clearTimeout(tap);
     tap = setTimeout(() => {
       if (clicks === 1)      { closePower(); menu.classList.contains('open') ? closeMenu() : openMenu(); }
-      else if (clicks === 2) { closeMenu();  bar.classList.contains('open') ? closePower() : openPower(); }
+      else if (clicks === 2) { closeAll();   toggleBench(); }
       else                   { closeAll();   startCountdown(); }
       clicks = 0;
     }, 300);
@@ -119,9 +125,16 @@
     el.addEventListener('click', (e) => { e.stopPropagation(); doAction(el.dataset.act); });
   });
 
+  // Bench: exit button + clicking the backdrop closes it
+  const benchExit = $('bench-exit');
+  if (benchExit) benchExit.addEventListener('click', (e) => { e.stopPropagation(); closeBench(); });
+  if (bench) bench.addEventListener('click', (e) => {
+    if (e.target === bench || e.target.classList.contains('bgrid')) closeBench();
+  });
+
   // clicking empty space (or pressing Esc) dismisses everything
   document.addEventListener('click', closeAll);
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') { closeAll(); cancelCountdown(); }
+    if (e.key === 'Escape') { closeAll(); cancelCountdown(); closeBench(); }
   });
 })();

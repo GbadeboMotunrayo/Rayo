@@ -205,6 +205,24 @@ def net_info():
     return round(down), round(up), signal, ssid, (iface or "")
 
 
+# ---- cpu temperature --------------------------------------------------------
+def cpu_temp():
+    """CPU package temperature in °C (thermal zone, then coretemp hwmon)."""
+    for z in glob.glob("/sys/class/thermal/thermal_zone*"):
+        if read(os.path.join(z, "type")) in ("x86_pkg_temp", "cpu-thermal", "acpitz"):
+            v = read(os.path.join(z, "temp"))
+            if v.isdigit():
+                return round(int(v) / 1000)
+    for h in glob.glob("/sys/class/hwmon/hwmon*"):
+        if read(os.path.join(h, "name")) == "coretemp":
+            for lab in glob.glob(os.path.join(h, "temp*_label")):
+                if "Package" in read(lab):
+                    v = read(lab.replace("_label", "_input"))
+                    if v.isdigit():
+                        return round(int(v) / 1000)
+    return None
+
+
 # ---- monthly data usage (self-accumulating, survives reboots) --------------
 # There is no built-in "data used this month" counter on Linux (/proc counters
 # reset on reboot / interface down). vnstat would need a daemon + sudo, so we
@@ -307,6 +325,7 @@ def sample():
         "battery": batt, "charging": charging,
         "batt_status": batt_status, "batt_min": batt_min,
         "fan": fan_rpm, "fan_max": fan_max, "fan_label": fan_label,
+        "cpu_temp": cpu_temp(),
         "down": down, "up": up, "signal": signal,
         "month_bytes": monthly_usage(iface),
         "ssid": ssid or iface or "—", "iface": iface,

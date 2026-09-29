@@ -253,6 +253,26 @@
     if ($('t-up')) $('t-up').textContent = fmtRate(d.up);
     if ($('t-up2')) $('t-up2').textContent = fmtUptime(d.boot);
 
+    // Bench mode readouts (only when the overlay exists)
+    if ($('b-cpu')) {
+      const temp = d.cpu_temp;
+      const tstr = (temp != null ? temp + '°C' : '—');
+      $('b-cpu').textContent = Math.round(cpu);
+      if ($('b-freq')) $('b-freq').textContent = d.freq + ' GHz';
+      if ($('b-freq2')) $('b-freq2').textContent = d.freq + ' GHz';
+      if ($('b-cpu-b')) paintBar($('b-cpu-b'), cpu);
+      $('b-mem').textContent = Math.round(mem);
+      if ($('b-mem-b')) paintBar($('b-mem-b'), mem);
+      $('b-temp').textContent = tstr;
+      if ($('b-temp2')) $('b-temp2').textContent = tstr;
+      if ($('b-temp-b')) paintBar($('b-temp-b'), temp != null ? clamp(temp, 0, 100) : 0);
+      if ($('b-pwr')) $('b-pwr').textContent = Math.round(d.battery) + '%';
+      if ($('b-data')) $('b-data').textContent = fmtTotal(d.month_bytes);
+      if ($('b-load')) $('b-load').textContent = Math.round(cpu);
+      if ($('b-disk2')) $('b-disk2').textContent = Math.round(disk);
+      if ($('b-down')) $('b-down').textContent = fmtRate(d.down);
+    }
+
     // fan speedometer
     updateGauge(d.fan, d.fan_max, d.fan_label);
 
