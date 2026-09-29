@@ -410,6 +410,32 @@ body{
 html.rayo-idle *,
 html.rayo-idle *::before,
 html.rayo-idle *::after{animation-play-state:paused!important}
+
+/* ============================================================
+   GLASS + GLOW POLISH (2026-09-29)
+   Faux-frosted glass (no backdrop-filter: it re-blurs every frame under the
+   overlay's software renderer). The look comes from a diagonal sheen, a bright
+   top edge and an inner bottom shadow. Plus a soft energy field behind the
+   reactor and a transition on the fan gauge's glow.
+   ============================================================ */
+.panel{
+  background:
+    linear-gradient(180deg, rgb(var(--ice-rgb) / .07), rgb(var(--ice-rgb) / .015) 40%, transparent 70%),
+    var(--glass);
+  box-shadow:0 14px 40px rgba(0,0,0,.6),
+             inset 0 1px 0 rgba(255,255,255,.16),
+             inset 0 0 0 1px rgb(var(--ice-rgb) / .06),
+             inset 0 -18px 30px rgba(0,0,0,.32)}
+/* glass sheen: a bright top-left specular streak sweeping across the pane */
+.panel::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;
+  background:
+    radial-gradient(120% 80% at 0% 0%, rgba(255,255,255,.16), transparent 40%),
+    linear-gradient(135deg, rgba(255,255,255,.12) 0%, rgba(255,255,255,.03) 22%, transparent 46%)}
+#fan-gauge .g-glow,#fan-gauge .g-nglow{transition:stroke .5s linear}
+/* soft energy field behind the reactor (the Iron-Man bloom, done cheaply) */
+.reactor::before{content:"";position:absolute;left:50%;top:50%;width:600px;height:600px;
+  transform:translate(-50%,-50%);border-radius:50%;z-index:-1;pointer-events:none;
+  background:radial-gradient(circle, rgb(var(--ice-rgb) / .22), rgb(var(--ice-rgb) / .07) 42%, transparent 68%)}
 </style>
 <script>
 // OBS Studio's Linux Browser Source (CEF) has a known bug where it flattens

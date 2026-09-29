@@ -48,6 +48,24 @@
     const svg = $('fan-gauge');
     if (!svg || gauge) return;
     const { START, SWEEP, cx, cy, r, stroke } = G;
+    // soft radial aura behind the whole gauge (CSS filters don't render in the
+    // WebKitGTK overlay, so the glow is built from geometry: a gradient disc +
+    // stacked translucent arcs, not a blur).
+    const defs = document.createElementNS(SVGNS, 'defs');
+    const rg = document.createElementNS(SVGNS, 'radialGradient');
+    rg.setAttribute('id', 'fan-aura');
+    [['0%', '.30'], ['55%', '.09'], ['100%', '0']].forEach(([o, op]) => {
+      const s = document.createElementNS(SVGNS, 'stop');
+      s.setAttribute('offset', o); s.setAttribute('stop-color', 'var(--ice)'); s.setAttribute('stop-opacity', op);
+      rg.appendChild(s);
+    });
+    defs.appendChild(rg); svg.appendChild(defs);
+    svg.appendChild(svgEl('circle', { class: 'g-aura', cx, cy, r: 90, fill: 'url(#fan-aura)' }));
+    // glow halo behind the fill: two widening translucent arcs = a soft bloom
+    const emptyArc = arcPath(cx, cy, r, START, START + 0.001);
+    const glow2 = svgEl('path', { class: 'g-glow', d: emptyArc, 'stroke-width': stroke + 16, stroke: 'var(--ice)', 'stroke-linecap': 'round', opacity: .12, fill: 'none' });
+    const glow1 = svgEl('path', { class: 'g-glow', d: emptyArc, 'stroke-width': stroke + 7, stroke: 'var(--ice)', 'stroke-linecap': 'round', opacity: .30, fill: 'none' });
+    svg.appendChild(glow2); svg.appendChild(glow1);
     svg.appendChild(svgEl('path', { class: 'g-track', 'stroke-width': stroke,
       d: arcPath(cx, cy, r, START, START + SWEEP) }));
     const fill = svgEl('path', { class: 'g-fill', 'stroke-width': stroke,
@@ -64,6 +82,9 @@
     // CSS transform (WebKitGTK mis-pivots transform-origin on SVG and flings it
     // off-screen). At rest it points to the start of the sweep.
     const t0 = polar(cx, cy, r - stroke - 6, START);
+    const nglow = svgEl('line', { class: 'g-nglow', x1: cx, y1: cy,
+      x2: t0.x.toFixed(2), y2: t0.y.toFixed(2), 'stroke-width': 9, stroke: 'var(--ice)', 'stroke-linecap': 'round', opacity: .25 });
+    svg.appendChild(nglow);
     const needle = svgEl('line', { class: 'g-needle', x1: cx, y1: cy,
       x2: t0.x.toFixed(2), y2: t0.y.toFixed(2), 'stroke-width': 3.5, stroke: 'var(--ice)' });
     svg.appendChild(needle);
@@ -73,7 +94,7 @@
     const unit = svgEl('text', { class: 'g-unit', x: cx, y: 168 }); unit.textContent = 'RPM';
     const lbl = svgEl('text', { class: 'g-lbl', x: cx, y: 190 }); lbl.textContent = 'CPU FAN';
     svg.append(val, unit, lbl);
-    gauge = { fill, needle, val, lbl };
+    gauge = { fill, needle, nglow, glow1, glow2, val, lbl };
   }
   function updateGauge(rpm, maxRpm, label) {
     if (!gauge) return;
@@ -82,12 +103,18 @@
     const { START, SWEEP, cx, cy, r, stroke } = G;
     const ang = START + frac * SWEEP;
     const col = fanColor(frac);
-    gauge.fill.setAttribute('d', arcPath(cx, cy, r, START, Math.max(START + 0.001, ang)));
+    const dNow = arcPath(cx, cy, r, START, Math.max(START + 0.001, ang));
+    gauge.fill.setAttribute('d', dNow);
     gauge.fill.setAttribute('stroke', col);
+    gauge.glow1.setAttribute('d', dNow); gauge.glow1.setAttribute('stroke', col);
+    gauge.glow2.setAttribute('d', dNow); gauge.glow2.setAttribute('stroke', col);
     const tip = polar(cx, cy, r - stroke - 6, ang);
     gauge.needle.setAttribute('x2', tip.x.toFixed(2));
     gauge.needle.setAttribute('y2', tip.y.toFixed(2));
     gauge.needle.setAttribute('stroke', col);
+    gauge.nglow.setAttribute('x2', tip.x.toFixed(2));
+    gauge.nglow.setAttribute('y2', tip.y.toFixed(2));
+    gauge.nglow.setAttribute('stroke', col);
     gauge.val.textContent = Math.round(rpm || 0);
     if (label) gauge.lbl.textContent = String(label).toUpperCase();
   }
