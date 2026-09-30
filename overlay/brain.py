@@ -84,8 +84,16 @@ def ask(question, on_text=None):
         return "my brain is offline. install ollama and pull a model, e.g. ollama pull gemma3:1b"
     if time.time() - _last[0] > MEMORY_TTL:
         _history.clear()
-    msgs = [{"role": "system", "content": SYSTEM.format(
-        user=os.environ.get("USER", "the user"), date=time.strftime("%A %d %B %Y"))}]
+    system = SYSTEM.format(user=os.environ.get("USER", "the user"), date=time.strftime("%A %d %B %Y"))
+    try:
+        import memory
+        known = memory.relevant(question)
+    except Exception:
+        known = []
+    if known:                                   # facts from the Obsidian vault ("remember that …")
+        system += ("\nThings the user told you to remember (\"I\"/\"my\" means the user). Use them when relevant:\n- "
+                   + "\n- ".join(known))
+    msgs = [{"role": "system", "content": system}]
     msgs += _history + [{"role": "user", "content": question}]
     body = {"model": m, "messages": msgs, "stream": True, "think": False, "keep_alive": KEEP_ALIVE,
             "options": {"num_ctx": 2048, "num_predict": 110, "temperature": 0.6}}

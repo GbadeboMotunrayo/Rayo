@@ -97,6 +97,15 @@ def speak(text):
     spk.wait()
 
 
+def remember_exchange(heard, reply):
+    """Today's note in the Obsidian vault (overlay/memory.py); never breaks the voice loop."""
+    try:
+        import memory
+        memory.log(heard, reply)
+    except Exception:
+        pass
+
+
 MAX_FOLLOWUPS = 2                               # "which document?" → retry once → give up
 
 
@@ -139,6 +148,7 @@ def report(text, model=None, q=None):
             spoken.feed(t)
         msg = brain.ask(p["arg"], partial)
         emit("answer", msg)
+        remember_exchange(text, msg)
         spoken.finish(msg)
         speaker().wait()
         notify(msg)
@@ -147,6 +157,7 @@ def report(text, model=None, q=None):
     if hud:
         emit("do", hud)                        # HUD-side actions: theme, bench
     emit("result", msg)
+    remember_exchange(text, msg)
     notify(f"“{text}” → {msg}" if text else msg)
     speak(msg)
 

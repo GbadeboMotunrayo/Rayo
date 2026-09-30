@@ -203,6 +203,24 @@ ollama pull gemma3:1b        # ~800MB; any chat model works
   model Ollama has. To choose one, set `RAYO_BRAIN_MODEL`, or put
   `{"brain": {"model": "qwen3:1.7b"}}` in `~/.config/rayo/config.json`.
 
+### Memory (an Obsidian vault)
+
+Rayo's memory is plain Markdown in `~/Documents/Rayo`, a folder that opens as
+an [Obsidian](https://obsidian.md) vault. Nothing is hidden in a database: what
+you see in the vault is what Rayo knows.
+
+| Say | Rayo does |
+|-----|-----------|
+| "remember that my sister's name is Tolu" | adds a bullet to `Memory/Facts.md` |
+| "what's my sister's name?" | the brain reads relevant facts before answering |
+| "what do you remember" | reads back your latest facts |
+| "forget that" | removes the last fact |
+| "open memory" | opens the vault in Obsidian (or the folder) |
+
+Every exchange is also logged to `Daily/YYYY-MM-DD.md`. To change the vault
+location, or turn the log off, edit `~/.config/rayo/config.json`:
+`{"memory": {"vault": "~/Notes/Rayo", "log": false}}`.
+
 Small models get facts wrong sometimes, especially dates, ages and recent
 events. Treat answers as a quick guess, not a source.
 

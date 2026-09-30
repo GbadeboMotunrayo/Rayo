@@ -252,6 +252,8 @@ def _open_target(t, verb="open"):
     t = _strip_articles(t)
     if not t:
         return plan("none", msg="open what?")
+    if t in ("memory", "my memory", "your memory", "vault", "my vault", "the vault", "notes", "my notes"):
+        return plan("vault", msg="opening memory")
     # missing detail -> ask a follow-up question
     if t in ("document", "file", "document file"):
         return plan("ask", {"expect": "document"}, "which document?")
@@ -353,6 +355,14 @@ def resolve(text):
         return plan("refuse", msg="power stays on the hub (safety)")
     if re.fullmatch(r"(what can you do|what do|what do you do|help|commands|what are your commands)", t) or t.startswith("help "):
         return plan("say", msg="try: open claude · open downloads · search for jollof rice · or just ask me anything")
+    # memory (the Obsidian vault, overlay/memory.py)
+    m = re.match(r"^(?:remember|don'?t forget|make a note|take a note|note)(?: that| this| of)?[:,]?\s+(.+)$", t)
+    if m:
+        return plan("remember", m.group(1), "")
+    if re.fullmatch(r"forget (that|it|the last (thing|one)|what i (just )?said)", t):
+        return plan("forget")
+    if re.fullmatch(r"(what do you (remember|know about me)|what have i told you|what('?s| is) in your memory)", t):
+        return plan("recall")
     # the brain: "ask …", "tell me …", "explain …", or a long question
     m = re.match(r"^(?:ask|question|ask (?:you|the brain)|i have a question)\s*(.*)$", t)
     if m and m.group(1):
@@ -560,6 +570,16 @@ def execute(p):
             import stats
             t = stats.cpu_temp()
             msg = f"cpu at {t}°c" if t is not None else "temperature unavailable"
+        elif k in ("remember", "forget", "recall"):
+            import memory
+            msg = {"remember": lambda: memory.remember(a), "forget": memory.forget_last,
+                   "recall": memory.recall}[k]()
+        elif k == "vault":
+            import memory
+            memory.ensure()
+            handler = subprocess.run(["xdg-mime", "query", "default", "x-scheme-handler/obsidian"],
+                                     capture_output=True, text=True).stdout.strip()
+            _popen(["xdg-open", memory.open_uri()]) if handler else _open_path(memory.vault())
         elif k == "speech":
             import config
             config.set("speech", "on", bool(a))
