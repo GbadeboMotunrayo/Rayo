@@ -129,11 +129,17 @@ Talk to Rayo, offline and private. Recognition runs on-device via Vosk
   off = back to zero.
 
 ```bash
-./voice-setup.sh    # one-time: Vosk (ears) + Piper (voice), under ~/.local (no sudo)
+./voice-setup.sh    # one-time: Vosk + Whisper (ears) + Piper (voice), under ~/.local (no sudo)
 ```
 
+The wake word runs on Vosk (tiny, always listening). What you say after it
+is transcribed by [Whisper](https://github.com/SYSTRAN/faster-whisper) `base.en`,
+which gets names like "Paystack" right (~1.5s per command, ~200MB while voice
+is on). Add your own hard words with `{"ears": {"vocab": ["Adunnwa", "CarPadi"]}}`
+in `~/.config/rayo/config.json`, or go back to Vosk-only with `{"ears": {"engine": "vosk"}}`.
+
 Rayo talks back, offline, with [Piper](https://github.com/OHF-Voice/piper1-gpl)
-(default voice: British "Alan"). It answers out loud, asks its follow-up
+(default voice: British "Jenny"). It answers out loud, asks its follow-up
 questions out loud, and the reactor pulses with its voice as it speaks. Say
 **"stop talking"** for captions only, and **"talk to me"** to bring the voice back.
 Pick another voice with `RAYO_VOICE=en_US-ryan-medium ./voice-setup.sh`.

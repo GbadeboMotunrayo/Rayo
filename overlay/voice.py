@@ -17,7 +17,7 @@ forwards to the HUD (the reactor visualises them):
   @armed · @listening · @level <0..1> · @heard <text> · @result <msg> ·
   @idle · @error <msg> · @off
 """
-import os, sys, json, math, shutil, subprocess, signal, threading
+import os, re, sys, json, math, shutil, subprocess, signal, threading
 from array import array
 
 MODEL_DIR = os.environ.get("RAYO_VOSK_MODEL",
@@ -235,16 +235,57 @@ def level(data):
     return max(0.0, min(1.0, (20 * math.log10(rms + 1) - 32) / 36))   # tuned for laptop mics
 
 
+WHISPER_DIR = os.path.expanduser("~/.local/share/rayo-voice/whisper")
+HINTS = ("Rayo. Open, launch, remember, search. Paystack, Obsidian, Firefox, Brave, Chromium, "
+         "Claude, WhatsApp, YouTube, Gmail, folder, document.")
+_whisper = []
+
+
+def whisper():
+    """Whisper for what you say after the wake word (far better with names than Vosk-small).
+    ~200MB once loaded; {"ears": {"engine": "vosk"}} in the config turns it off."""
+    import config
+    if config.get("ears", "engine", "whisper") != "whisper":
+        return None
+    if not _whisper:
+        try:
+            from faster_whisper import WhisperModel
+            _whisper.append(WhisperModel(config.get("ears", "model", "base.en"), device="cpu",
+                                         compute_type="int8", cpu_threads=4, download_root=WHISPER_DIR))
+        except Exception:
+            _whisper.append(None)              # not installed: Vosk transcribes instead
+    return _whisper[0]
+
+
+def whisper_warm():
+    threading.Thread(target=whisper, daemon=True).start()
+
+
+def transcribe(audio):
+    """16kHz s16 bytes → lower-case words, or None if Whisper isn't available."""
+    wm = whisper()
+    if wm is None or len(audio) < RATE // 2:   # under a quarter second: nothing said
+        return None
+    import numpy as np, config
+    pcm = np.frombuffer(audio, dtype=np.int16).astype(np.float32) / 32768
+    segs, _ = wm.transcribe(pcm, language="en", beam_size=1, vad_filter=True, condition_on_previous_text=False,
+                            initial_prompt=HINTS + " " + " ".join(config.get("ears", "vocab", [])))
+    text = " ".join(s.text for s in segs)
+    return " ".join(re.sub(r"[^\w\s']", " ", text).lower().split())
+
+
 def capture(model, q, seconds=6):
-    """Recognise one full utterance from the shared audio queue."""
+    """Hear one full utterance from the shared audio queue. Vosk spots where you
+    stop talking; Whisper (if installed) then transcribes the whole clip."""
     import queue, time, vosk
     rec = vosk.KaldiRecognizer(model, RATE)
-    text, start = "", time.time()
+    text, start, audio = "", time.time(), bytearray()
     while time.time() - start < seconds and not STOP["v"]:
         try:
             data = q.get(timeout=0.5)
         except queue.Empty:
             continue
+        audio += data
         emit("level", f"{level(data):.2f}")
         if rec.AcceptWaveform(data):
             text = json.loads(rec.Result()).get("text", "")
@@ -253,6 +294,13 @@ def capture(model, q, seconds=6):
     if not text:
         text = json.loads(rec.FinalResult()).get("text", "")
     emit("level", "0")
+    if text:                                   # Vosk heard speech: let Whisper get the words right
+        try:
+            better = transcribe(bytes(audio))
+            if better:
+                text = better
+        except Exception:
+            pass
     return text.lower().strip()
 
 
@@ -300,6 +348,7 @@ def wake_loop():
 
     with open_stream(q) as mic:               # ONE mic stream for everything
         emit("armed"); notify("Rayo is listening — say “Rayo”")
+        whisper_warm()                          # Whisper loads in the background (~2s)
         speak("Rayo online.")                   # also loads the voice (~4s) before you need it
         drain(q)                                # ...and it said "Rayo": don't wake on that
         rec = wake_rec()

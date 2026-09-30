@@ -15,7 +15,7 @@ from array import array
 import config
 
 TTS_DIR = os.path.expanduser("~/.local/share/rayo-voice/tts")
-DEFAULT_VOICE = "en_GB-alan-medium"
+DEFAULT_VOICE = "en_GB-jenny_dioco-medium"
 PLAYERS = (["pw-play", "--raw", "--rate", "{rate}", "--channels", "1", "--format", "s16", "-"],
            ["paplay", "--raw", "--rate={rate}", "--channels=1", "--format=s16le"],
            ["aplay", "-q", "-t", "raw", "-r", "{rate}", "-f", "S16_LE", "-c", "1"])

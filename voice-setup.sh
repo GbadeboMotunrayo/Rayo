@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ============================================================================
 # Rayo voice setup. Offline, no sudo (everything goes under ~/.local).
-#   ./voice-setup.sh                        ears (Vosk) + voice (Piper, "Alan")
+#   ./voice-setup.sh                        ears (Vosk + Whisper) + voice (Piper, "Jenny")
 #   RAYO_VOICE=en_US-ryan-medium ./voice-setup.sh     pick another Piper voice
 # Voices: https://huggingface.co/rhasspy/piper-voices
 # ============================================================================
@@ -9,15 +9,15 @@ set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 BASE="$HOME/.local/share/rayo-voice"; VENV="$BASE/venv"; MODEL="$BASE/model"; TTS="$BASE/tts"
 URL="https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip"
-VOICE="${RAYO_VOICE:-en_GB-alan-medium}"
+VOICE="${RAYO_VOICE:-en_GB-jenny_dioco-medium}"
 say(){ printf '\n\033[1;36m▸ %s\033[0m\n' "$*"; }
 fetch(){ if command -v curl >/dev/null; then curl -fL "$1" -o "$2"; else wget -O "$2" "$1"; fi; }
 
 say "Creating Python venv at $VENV"
 mkdir -p "$BASE"; [ -x "$VENV/bin/python" ] || python3 -m venv "$VENV"
 "$VENV/bin/pip" -q install --upgrade pip
-say "Installing Vosk (ears) and Piper (voice)"
-"$VENV/bin/pip" -q install vosk piper-tts
+say "Installing Vosk (wake word), Whisper (hearing commands) and Piper (voice)"
+"$VENV/bin/pip" -q install vosk faster-whisper piper-tts
 
 if [ ! -d "$MODEL" ] || [ -z "$(ls -A "$MODEL" 2>/dev/null)" ]; then
   say "Downloading the small English speech model (~40MB, one time)"
@@ -33,7 +33,7 @@ if [ ! -f "$TTS/$VOICE.onnx" ]; then
   src="https://huggingface.co/rhasspy/piper-voices/resolve/main/${loc%%_*}/$loc/$name/$quality/$VOICE"
   mkdir -p "$TTS"; fetch "$src.onnx" "$TTS/$VOICE.onnx"; fetch "$src.onnx.json" "$TTS/$VOICE.onnx.json"
 fi
-if [ "$VOICE" != "en_GB-alan-medium" ]; then
+if [ "$VOICE" != "en_GB-jenny_dioco-medium" ]; then
   mkdir -p "$HOME/.config/rayo"
   "$VENV/bin/python" -c "import sys; sys.path.insert(0, '$HERE/overlay'); import config; config.set('speech', 'voice', '$VOICE')"
 fi
