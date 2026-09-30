@@ -586,6 +586,49 @@ html.rayo-idle *::after{animation-play-state:paused!important}
 .bench .co-ne{top:56px;right:-6px;text-align:right}
 .bench .co-sw{bottom:56px;left:-6px;text-align:left}
 .bench .co-se{bottom:56px;right:-6px;text-align:right}
+
+/* ============================================================
+   VOICE — the reactor is the voice interface (core/voice.js)
+   ============================================================ */
+/* top-strip indicator: only present while voice is on */
+.topstrip .vstate{display:none;color:var(--ice)}
+html.rv-on .topstrip .vstate{display:inline}
+.topstrip .vstate::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;
+  background:var(--ice);box-shadow:0 0 8px var(--ice);margin-right:7px;vertical-align:1px;
+  animation:blink 1.6s ease-in-out infinite}
+html.rv-listening .topstrip .vstate{color:var(--ice-bright)}
+html.rv-error .topstrip .vstate{color:#ff9a9d}
+html.rv-error .topstrip .vstate::before{background:var(--red);box-shadow:0 0 8px var(--red)}
+
+/* spectrum ring between the blades and the inner ring: a faint "ear" while
+   armed, flaring with your voice level while listening */
+.vmeter{position:absolute;width:236px;height:236px;border-radius:50%;pointer-events:none;
+  background:repeating-conic-gradient(var(--ice-bright) 0 1.6deg, transparent 1.6deg 7.5deg);
+  -webkit-mask:radial-gradient(circle, transparent 104px, #000 105px, #000 116px, transparent 117px);
+  mask:radial-gradient(circle, transparent 104px, #000 105px, #000 116px, transparent 117px);
+  opacity:0;transform:scale(var(--vs,1));
+  transition:opacity .35s ease, transform .22s cubic-bezier(.2,.8,.2,1)}
+html.rv-armed .vmeter{opacity:.22}
+html.rv-listening .vmeter{opacity:.95}
+/* the core breathes with your voice (scale lives on the container, so it
+   composes with the orb's own pulse instead of fighting it) */
+.orb{transform:scale(var(--vo,1));transition:transform .22s cubic-bezier(.2,.8,.2,1)}
+html.rv-listening .orb .core{box-shadow:inset 0 0 46px rgba(255,255,255,.35),
+  inset 0 0 20px rgb(var(--ice-hi-rgb) / .45), 0 0 34px rgb(var(--ice-rgb) / .75)}
+
+/* what Rayo heard, as a subtitle under the reactor */
+.vcap{position:absolute;left:50%;top:842px;transform:translateX(-50%);z-index:4;text-align:center;
+  font-family:var(--font-mono);pointer-events:none;opacity:0;transition:opacity .4s ease;white-space:nowrap}
+.vcap.show{opacity:1}
+.vcap .said{font-size:22px;color:var(--paper);letter-spacing:.5px;text-shadow:0 0 18px rgb(var(--ice-rgb) / .45)}
+.vcap .said:empty{display:none}
+.vcap .res{font-size:11px;letter-spacing:3px;color:var(--ice);margin-top:8px;text-transform:uppercase}
+.vcap.err .res{color:#ff9a9d}
+
+/* the VOICE item in the radial menu shows it's on */
+html.rv-on .hm-item[data-act="voice"]{border-color:var(--ice);color:var(--ice-bright);
+  box-shadow:0 8px 26px rgba(0,0,0,.55),0 0 16px rgb(var(--ice-rgb) / .45)}
+@media (prefers-reduced-motion:reduce){.vmeter,.orb{transition:none}}
 </style>
 <script>
 // OBS Studio's Linux Browser Source (CEF) has a known bug where it flattens
@@ -610,6 +653,7 @@ if (new URLSearchParams(location.search).get('obsSafe') === '1') {
     <span>SYS <b>NOMINAL</b></span>
     <span>SECURE LINK <b>ACTIVE</b></span>
     <span>THREAT <b>NONE</b></span>
+    <span class="vstate" id="vstate">VOICE ARMED</span>
   </div>
 
   <!-- CLOCK (top-left) -->
@@ -655,6 +699,7 @@ if (new URLSearchParams(location.search).get('obsSafe') === '1') {
     <span class="cardinal e">090</span>
     <span class="cardinal s">180</span>
     <span class="cardinal w">270</span>
+    <div class="vmeter"></div>
     <div class="blades"></div>
     <div class="orb">
       <span class="core"></span>
@@ -664,6 +709,8 @@ if (new URLSearchParams(location.search).get('obsSafe') === '1') {
     </div>
     <div class="hub-hit" id="hub-hit" title="click: menu  ·  double-click: bench  ·  triple-click: shut down"></div>
   </div>
+
+  <div class="vcap" id="vcap"><div class="said"></div><div class="res"></div></div>
 
   <div class="hubmenu" id="hubmenu" aria-hidden="true"></div>
   <div class="powerbar" id="powerbar" aria-hidden="true">
@@ -792,6 +839,7 @@ if (new URLSearchParams(location.search).get('obsSafe') === '1') {
 
 <script src="core/theme.js"></script>
 <script src="core/hud.js"></script>
+<script src="core/voice.js"></script>
 <script src="core/control.js"></script>
 </body>
 </html>

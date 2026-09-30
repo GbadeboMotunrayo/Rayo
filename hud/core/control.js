@@ -21,6 +21,11 @@
         return;
       }
     } catch (e) { /* fall through to preview log */ }
+    // plain browser: VOICE plays a labelled demo so the look can be previewed
+    if (action === 'voice' && window.RayoVoice) {
+      window.RayoVoice.demoRunning ? window.RayoVoice.stopDemo() : window.RayoVoice.demo();
+      return;
+    }
     console.log('[rayo action]', action);
   }
 
@@ -50,6 +55,7 @@
     const a = ang * Math.PI / 180;
     const el = document.createElement('button');
     el.className = 'hm-item' + (it.danger ? ' danger' : '');
+    el.dataset.act = it.act;
     el.style.setProperty('--x', (Math.cos(a) * RADIUS).toFixed(1) + 'px');
     el.style.setProperty('--y', (Math.sin(a) * RADIUS).toFixed(1) + 'px');
     el.style.transitionDelay = (i * 14) + 'ms';

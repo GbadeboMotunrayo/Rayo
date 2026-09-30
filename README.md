@@ -132,6 +132,16 @@ Talk to Rayo, offline and private. Recognition runs on-device via Vosk
 ./voice-setup.sh    # one-time: venv + Vosk + small model, under ~/.local (no sudo)
 ```
 
+**Turning it on and off:** tap the reactor once to open the radial menu, then
+tap **VOICE**. Do the same to turn it off. The reactor shows you what's happening:
+
+| State | What you see |
+|-------|--------------|
+| Armed | "VOICE ARMED" in the top strip, a faint ring around the core, VOICE glows in the menu |
+| Listening | the core pulses with your voice and a spectrum ring flares around it |
+| Heard | your words as a subtitle under the reactor, with the result beneath |
+| Problem | a red message under the reactor (e.g. "run ./voice-setup.sh") |
+
 Commands: "open browser / files / terminal / settings / displays", "lock",
 "sleep", "focus". Power actions (shutdown/restart) stay on the hub, by design —
 a misheard word must never turn your machine off.

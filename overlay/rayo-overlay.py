@@ -241,19 +241,52 @@ class Overlay(Gtk.Window):
 
     def _toggle_voice(self):
         """Toggle the wake-word listener (voice.sh --wake). Off by default, so
-        it only listens when you ask; killed when the overlay exits."""
+        it only listens when you ask. Its stdout "@event" lines are streamed
+        into the HUD so the reactor shows armed / listening / heard / errors."""
         p = getattr(self, "_voice_proc", None)
         if p and p.poll() is None:
             self._kill_voice()
+            self._voice_event("off", "")
             return
         try:
             self._voice_proc = subprocess.Popen(
                 [os.path.join(HERE, "voice.sh"), "--wake"],
-                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
-            atexit.register(self._kill_voice)
-            print("[rayo] voice wake mode ON")
+                stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True,
+                bufsize=1, start_new_session=True)
         except Exception as e:
-            print(f"[rayo] voice start failed: {e}", file=sys.stderr)
+            self._voice_event("error", f"voice failed to start: {e}")
+            return
+        if not getattr(self, "_voice_atexit", False):
+            atexit.register(self._kill_voice)
+            self._voice_atexit = True
+        self._voice_event("starting", "")
+        threading.Thread(target=self._pump_voice, args=(self._voice_proc,), daemon=True).start()
+        print("[rayo] voice wake mode ON")
+
+    def _pump_voice(self, proc):
+        """Background thread: forward the listener's @events to the HUD."""
+        saw_off = False
+        for line in proc.stdout:
+            line = line.strip()
+            if not line.startswith("@"):
+                continue
+            kind, _, payload = line[1:].partition(" ")
+            saw_off = saw_off or kind == "off"
+            self._voice_event(kind, payload)
+        if not saw_off:                       # died without saying goodbye
+            self._voice_event("off", "")
+
+    def _voice_event(self, kind, payload):
+        """Thread-safe: hand one voice event to the page on the GTK main loop."""
+        js = ("window.RayoVoice && window.RayoVoice.on(%s, %s)"
+              % (_json.dumps(kind), _json.dumps(payload)))
+        def _run():
+            try:
+                self.web.run_javascript(js, None, None, None)
+            except Exception:
+                pass
+            return False
+        GLib.idle_add(_run)
 
     def _kill_voice(self):
         p = getattr(self, "_voice_proc", None)
