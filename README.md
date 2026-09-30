@@ -7,7 +7,7 @@
 <p align="center"><b>Your Linux desktop, but make it a superhero.</b><br>
 A free, open-source animated HUD that runs on your wallpaper.</p>
 
-<p align="center"><em>RAYO &mdash; Radiant Assistant for Your Operations</em><br>
+<p align="center"><em>RAYO &mdash; Radiant Assistant, Your Oracle</em><br>
 <sub>(<em>rayo</em>: Spanish for &ldquo;ray of light / lightning&rdquo; &mdash; the bolt in the mark)</sub></p>
 
 <p align="center">
