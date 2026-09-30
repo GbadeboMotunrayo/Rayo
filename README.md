@@ -148,10 +148,12 @@ Say **"Rayo"**, wait for the chime, then:
 |-----|-----------|
 | "open claude" · "open obs" · "launch calculator" | opens **any installed app** by name |
 | "open browser" · "open files" · "open terminal" | your default browser, file manager, terminal |
+| "launch browser" | asks *"which browser? brave, chromium or firefox"*, then opens the one you name ("firefox", "the second one", "default") |
 | "open documents" · "open downloads" · "open desktop" | your standard folders |
 | "open tech" · "open the carpadi folder" | **any folder** by name, fuzzy-matched |
 | "open downloads and tech" | several folders at once |
-| "open document readme" | a document by name |
+| "open document" | asks *"which document?"*, then opens the one you name |
+| "open document readme" | a document by name, straight away |
 | "search for weather in lagos" | a web search |
 | "open youtube" · "go to github" · "open gmail" | common sites |
 | "volume up / down" · "mute" · "unmute" | sound |
@@ -161,12 +163,17 @@ Say **"Rayo"**, wait for the chime, then:
 | "settings" · "wifi / bluetooth / sound / display settings" | system settings |
 | "lock" · "sleep" · "focus" · "help" | system |
 
+When Rayo needs a detail it asks, and the question shows under the reactor.
+Just answer; no wake word is needed. It asks at most twice, and "cancel" or
+"never mind" backs out. The same goes for "open folder", "launch app" and
+"search".
+
 Apps and folders are discovered from your machine, so new ones work without
 changes. Power actions (shutdown/restart) stay on the hub, by design: a
 misheard word must never turn your machine off. The full grammar lives in
 [`overlay/commands.py`](overlay/commands.py).
 
-## Support## Support
+## Support
 
 Rayo is free and always will be. If it made your desktop cooler, a tip funds new
 themes and build time:

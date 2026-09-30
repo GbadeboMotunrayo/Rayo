@@ -66,9 +66,34 @@ def fail(msg):
 import commands
 
 
-def report(text):
+MAX_FOLLOWUPS = 2                               # "which document?" → retry once → give up
+
+
+def drain(q):
+    import queue
+    try:
+        while True:
+            q.get_nowait()
+    except queue.Empty:
+        pass
+
+
+def report(text, model=None, q=None):
+    """Run a command. If Rayo needs a detail ("which document?") it asks and
+    hears the answer on the same open mic, no wake word needed."""
     emit("heard", text)
-    msg, hud = commands.execute(commands.resolve(text))
+    p = commands.resolve(text)
+    for _ in range(MAX_FOLLOWUPS):
+        if p["kind"] != "ask" or model is None or STOP["v"]:
+            break
+        emit("ask", p["msg"]); chime()
+        drain(q)                                # don't hear the chime / our own question
+        reply = capture(model, q)
+        emit("heard", reply)
+        p = commands.answer(p["arg"], reply)
+    if p["kind"] == "ask":
+        p = commands.plan("none", msg="okay, never mind")
+    msg, hud = commands.execute(p)
     if hud:
         emit("do", hud)                        # HUD-side actions: theme, bench
     emit("result", msg)
@@ -194,8 +219,7 @@ def one_shot():
     model, q = load(), queue.Queue()
     emit("listening"); notify("listening…")
     with open_stream(q):
-        text = capture(model, q)
-    report(text)
+        report(capture(model, q), model, q)    # mic stays open for follow-ups
     emit("off")
 
 
@@ -227,7 +251,7 @@ def wake_loop():
                 while not q.empty():          # discard the wake phrase itself
                     try: q.get_nowait()
                     except queue.Empty: break
-                report(capture(model, q))
+                report(capture(model, q), model, q)
                 emit("idle")
                 rec = wake_rec()
     emit("off")

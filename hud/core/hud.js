@@ -240,7 +240,9 @@
     // weather orb
     const clean = (s) => (s || '').replace('+', '');
     if ($('wx-t')) {
-      $('wx-t').textContent = clean(d.wx_temp) || '—';
+      const t = clean(d.wx_temp).match(/^(-?\d+)\s*(°[CF])?/);   // big number, small unit
+      $('wx-t').textContent = t ? t[1] : (clean(d.wx_temp) || '—');
+      if ($('wx-u')) $('wx-u').textContent = t && t[2] ? t[2] : '';
       $('wx-c').textContent = d.wx_cond || '—';
       const loc = d.wx_loc || '';
       if ($('wx-loc')) $('wx-loc').textContent = /^[\d.,\s-]+$/.test(loc) ? '' : loc.split(',')[0];

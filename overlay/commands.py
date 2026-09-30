@@ -43,7 +43,7 @@ MUSIC = _user_dir("MUSIC", "Music")
 VIDEOS = _user_dir("VIDEOS", "Videos")
 
 PLACES = {
-    "documents": DOCUMENTS, "document": DOCUMENTS, "downloads": DOWNLOADS, "download": DOWNLOADS,
+    "documents": DOCUMENTS, "downloads": DOWNLOADS, "download": DOWNLOADS,
     "desktop": DESKTOP, "pictures": PICTURES, "photos": PICTURES, "music": MUSIC,
     "videos": VIDEOS, "home": HOME, "home folder": HOME,
 }
@@ -205,6 +205,31 @@ def default_browser():
     return ("argv", [["firefox"], ["xdg-open", "https://duckduckgo.com"]], "browser")
 
 
+def browser_options():
+    """[(label, desktop_path)] of installed browsers, default browser first."""
+    def build():
+        seen, out = set(), []
+        for d in APP_DIRS:
+            for path in sorted(glob.glob(os.path.join(d, "*.desktop"))):
+                i = _read_desktop(path)
+                if i.get("Type") != "Application" or i.get("NoDisplay") == "true":
+                    continue
+                if "WebBrowser" not in i.get("Categories", ""):
+                    continue
+                label = re.sub(r"\s*(web )?browser$", "", i.get("Name", "").strip(), flags=re.I).lower()
+                if label and label not in seen:
+                    seen.add(label)
+                    out.append((label, path))
+        return out
+    opts = _cached("browsers", build)
+    d = default_browser()
+    return sorted(opts, key=lambda o: o[1] != d[1]) if d[0] == "app" else opts
+
+
+def _choices(names):
+    return names[0] if len(names) == 1 else ", ".join(names[:-1]) + " or " + names[-1]
+
+
 # ---- resolve: sentence → plan -------------------------------------------------
 def plan(kind, arg=None, msg=""):
     return {"kind": kind, "arg": arg, "msg": msg}
@@ -222,11 +247,25 @@ def _strip_articles(t):
     return re.sub(r"^(the|my|a|an)\s+", "", t).strip()
 
 
-def _open_target(t):
+def _open_target(t, verb="open"):
     """Resolve what follows 'open' (or a bare noun)."""
     t = _strip_articles(t)
     if not t:
         return plan("none", msg="open what?")
+    # missing detail -> ask a follow-up question
+    if t in ("document", "file", "document file"):
+        return plan("ask", {"expect": "document"}, "which document?")
+    if t == "folder":
+        return plan("ask", {"expect": "folder"}, "which folder?")
+    if t in ("app", "application", "program"):
+        return plan("ask", {"expect": "app"}, "which app?")
+    if t in ("browser", "browsers", "web browser") and verb in ("launch", "start", "run"):
+        opts = browser_options()
+        if len(opts) > 1:
+            return plan("ask", {"expect": "browser", "options": opts},
+                        "which browser? " + _choices([l for l, _ in opts]))
+        if opts:
+            return plan("app", opts[0][1], f"opening {opts[0][0]}")
     # explicit folder(s): "folder tech", "the tech folder", "downloads and tech folders"
     m = re.match(r"^folders?\s+(?:called|named)?\s*(.+)$", t) or re.match(r"^(.+?)\s+folders?$", t)
     if m:
@@ -333,6 +372,8 @@ def resolve(text):
     if re.search(r"^(play|pause|resume|stop)( (the )?(music|song|video|it))?$", t):
         return plan("media", "PlayPause", "play / pause")
     # search the web
+    if re.fullmatch(r"(search|google|look up)( for)?( something)?", t):
+        return plan("ask", {"expect": "search"}, "search for what?")
     m = re.match(r"^(?:search|google|look up|find online)(?: for| up)?\s+(.+)$", t)
     if m:
         q = m.group(1)
@@ -345,12 +386,58 @@ def resolve(text):
     if re.search(r"\b(focus|do not disturb|quiet mode)\b", t):
         return plan("dnd", msg="focus toggled")
     # open / launch / go to
-    m = re.match(r"^(?:open|launch|start|run|show(?: me)?|go to|bring up|pull up)\s+(.+)$", t)
+    m = re.match(r"^(open|launch|start|run|show(?: me)?|go to|bring up|pull up)\s+(.+)$", t)
     if m:
-        return _open_target(m.group(1))
+        return _open_target(m.group(2), m.group(1))
     # bare noun ("downloads", "claude", "tech folder")
     p = _open_target(t)
-    return p if p["kind"] != "none" else plan("none", msg=f"no command for “{t}” — say “help”")
+    return p if p["kind"] != "none" else plan("none", msg=f"no command for “{t}”. say “help”")
+
+
+CANCEL = re.compile(r"\b(cancel|never ?mind|nothing|forget it|stop|no)\b")
+ORDINALS = {"first": 0, "second": 1, "third": 2, "fourth": 3, "last": -1,   # before numerals:
+            "one": 0, "two": 1, "three": 2, "four": 3}                    # "the second one"
+
+
+def answer(ctx, reply):
+    """Turn the reply to Rayo's question (ctx from an 'ask' plan) into a plan."""
+    r = clean(reply)
+    if not r:
+        return plan("none", msg="didn't catch that")
+    if CANCEL.search(r):
+        return plan("none", msg="okay, cancelled")
+    exp = ctx.get("expect")
+    if exp == "document":
+        name = re.sub(r"^(?:(?:the|my|a)\s+)?(?:(?:document|file)\s+)?(?:(?:called|named)\s+)?", "", r)
+        name = re.sub(r"\s+(document|file)$", "", name).strip()
+        path = best(name, file_index(), 0.8)
+        if path:
+            return plan("open", path, f"opening {os.path.basename(path)}")
+        if not ctx.get("retried"):
+            return plan("ask", {"expect": "document", "retried": True},
+                        f"couldn't find “{name}”. which document?")
+        return plan("none", msg=f"no document like “{name}”")
+    if exp == "folder":
+        return _folders(re.sub(r"\s+folders?$", "", _strip_articles(r)))
+    if exp == "app":
+        return _open_target(r)
+    if exp == "search":
+        return plan("url", "https://www.google.com/search?q=" + urllib.parse.quote_plus(r), f"searching {r}")
+    if exp == "browser":
+        opts = ctx["options"]
+        if re.search(r"\bdefault\b", r):
+            return plan(*default_browser()[:2], msg="opening default browser")
+        for word, i in ORDINALS.items():
+            if re.search(rf"\b{word}\b", r) and -len(opts) <= i < len(opts):
+                return plan("app", opts[i][1], f"opening {opts[i][0]}")
+        for label, path in opts:
+            if label in r or r in label:
+                return plan("app", path, f"opening {label}")
+        path = best(r, [(l, p, 0) for l, p in opts], 0.6)
+        if path:
+            return plan("app", path, "opening " + next(l for l, p in opts if p == path))
+        return plan("none", msg=f"no browser called “{r}”")
+    return plan("none", msg="never mind")
 
 
 # ---- execute: plan → side effect ------------------------------------------------
