@@ -567,7 +567,7 @@ html.rayo-idle *::after{animation-play-state:paused!important}
 .bench .spin{transform-origin:400px 400px;animation:brot 42s linear infinite}
 .bench .spin.rev{animation-duration:64s;animation-direction:reverse}
 @keyframes brot{to{transform:rotate(360deg)}}
-.bench .bcore{position:absolute;left:50%;top:50%;width:110px;height:110px;transform:translate(-50%,-50%);border-radius:50%;
+.bench .bcore{position:absolute;left:calc(50% - 55px);top:calc(50% - 55px);width:110px;height:110px;border-radius:50%;
   background:radial-gradient(circle at 40% 34%, var(--ice-hi), var(--ice-bright) 40%, var(--ice) 70%, var(--ice-deep));
   box-shadow:0 0 60px 14px rgb(var(--ice-rgb)/.5), inset 0 0 30px rgba(255,255,255,.4);
   animation:orbPulse 3s ease-in-out infinite}
@@ -579,6 +579,11 @@ html.rayo-idle *::after{animation-play-state:paused!important}
 .bench .cli{position:absolute;left:70px;bottom:64px;width:640px;font-size:12px;color:var(--muted);line-height:1.7}
 .bench .cli .p{color:var(--ice)}
 .bench .cli .cur{display:inline-block;width:8px;height:13px;background:var(--ice);vertical-align:-2px;animation:blink 1s steps(1) infinite}
+.bench .stage2 .co{position:absolute;z-index:2}
+.bench .co-nw{top:56px;left:-6px;text-align:left}
+.bench .co-ne{top:56px;right:-6px;text-align:right}
+.bench .co-sw{bottom:56px;left:-6px;text-align:left}
+.bench .co-se{bottom:56px;right:-6px;text-align:right}
 </style>
 <script>
 // OBS Studio's Linux Browser Source (CEF) has a known bug where it flattens
@@ -766,12 +771,12 @@ if (new URLSearchParams(location.search).get('obsSafe') === '1') {
     </svg>
     <div class="bcore"></div>
     <div class="corelbl">SYSTEM CORE &middot; <span id="b-load">--</span>% LOAD</div>
-  </div>
 
-  <div class="co" style="right:560px;top:250px;text-align:right"><div class="k">CLOCK</div><div class="v" id="b-freq2">--</div><div class="u">processor</div></div>
-  <div class="co" style="left:1150px;top:330px"><div class="k">STORAGE</div><div class="v"><span id="b-disk2">--</span>%</div><div class="u">in use</div></div>
-  <div class="co" style="left:1150px;top:540px"><div class="k">NETWORK</div><div class="v">&#8595; <span id="b-down">--</span></div><div class="u">throughput</div></div>
-  <div class="co" style="right:560px;top:560px;text-align:right"><div class="k">THERMAL</div><div class="v" id="b-temp2">--</div><div class="u">package</div></div>
+    <div class="co co-nw"><div class="k">CLOCK</div><div class="v" id="b-freq2">--</div><div class="u">processor</div></div>
+    <div class="co co-ne"><div class="k">STORAGE</div><div class="v"><span id="b-disk2">--</span>%</div><div class="u">in use</div></div>
+    <div class="co co-sw"><div class="k">NETWORK</div><div class="v">&#8595; <span id="b-down">--</span></div><div class="u">throughput</div></div>
+    <div class="co co-se"><div class="k">THERMAL</div><div class="v" id="b-temp2">--</div><div class="u">package</div></div>
+  </div>
 
   <div class="cli">
     <div><span class="p">rayo&gt;</span> monitor --live</div>
