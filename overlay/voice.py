@@ -17,7 +17,7 @@ forwards to the HUD (the reactor visualises them):
   @armed · @listening · @level <0..1> · @heard <text> · @result <msg> ·
   @idle · @error <msg> · @off
 """
-import os, re, sys, json, math, shutil, subprocess, signal, threading
+import os, re, sys, json, time, math, shutil, subprocess, signal, threading
 from array import array
 
 MODEL_DIR = os.environ.get("RAYO_VOSK_MODEL",
@@ -140,7 +140,17 @@ def report(text, model=None, q=None):
     if p["kind"] == "brain":                    # no command matched: think (and maybe act)
         import brain, speech, tools
         emit("thinking", "")
-        if brain.wants_action(p["arg"]):        # action-sounding: the brain may pick tools
+        import commands as _c
+        if brain.wants_action(p["arg"]) and not brain.tools_enabled() and not _c.QUESTION.match(p["arg"]) \
+                and not re.match(r"^(tell me|explain|define|describe|why|who|write|summari[sz]e)\b", p["arg"]):
+            import persona                      # an action she has no command for: say so, don't make something up
+            msg = persona.flavor("none", "I don't know how to do that one yet. Try: open something, search for something, or ask me a question")
+            emit("result", msg)
+            remember_exchange(text, msg)
+            notify(msg)
+            speak(msg)
+            return
+        if brain.wants_action(p["arg"]) and brain.tools_enabled():   # opt-in: the brain may pick tools
             r = brain.act(p["arg"])
             if r["calls"]:
                 msg, huds = tools.run(r["calls"])
@@ -152,7 +162,8 @@ def report(text, model=None, q=None):
                 notify(f"“{text}” → {msg}")
                 speak(msg)
                 return
-            msg = r["text"]                     # it just talked: show it, then say it
+            import persona
+            msg = persona.brain_quip(r["text"])     # it just talked: show it, then say it
             emit("answer", msg)
             remember_exchange(text, msg)
             notify(msg)
@@ -163,14 +174,28 @@ def report(text, model=None, q=None):
         def partial(t):
             emit("say", t)
             spoken.feed(t)
-        msg = brain.ask(p["arg"], partial)
+        import persona
+        msg = persona.brain_quip(brain.ask(p["arg"], partial))   # the answer streams; the jab lands at the end
         emit("answer", msg)
         remember_exchange(text, msg)
         spoken.finish(msg)
         speaker().wait()
         notify(msg)
         return
+    if p["kind"] == "power":                   # confirmed: say goodbye first, then do it
+        import persona
+        bye = persona.farewell(p["arg"])
+        emit("result", bye)
+        remember_exchange(text, bye)
+        notify(bye)
+        speak(bye)
+        time.sleep(0.6)
+        commands.execute(p)
+        return
     msg, hud = commands.execute(p)
+    if p["kind"] not in ("multi", "power"):
+        import persona
+        msg = persona.flavor(p["kind"], msg)   # sarcasm goes around the answer, never instead of it
     if hud:
         emit("do", hud)                        # HUD-side actions: theme, bench
     emit("result", msg)
@@ -368,7 +393,8 @@ def wake_loop():
         import awareness
         watcher = awareness.Watcher()
         whisper_warm()                          # Whisper loads in the background (~2s)
-        speak("Rayo online.")                   # also loads the voice (~4s) before you need it
+        import persona
+        speak(persona.greeting())               # also loads the voice (~4s) before you need it
         drain(q)                                # ...and it said "Rayo": don't wake on that
         rec = wake_rec()
         while not STOP["v"]:
@@ -379,6 +405,8 @@ def wake_loop():
                     fail("microphone stopped — is a mic connected and unmuted?")
                 continue
             for kind, alert in watcher.tick():      # she speaks up first (battery, heat, memory, rain)
+                import persona
+                alert = persona.alert(kind, alert)
                 emit("alert", alert)
                 notify("Rayo: " + alert)
                 if not awareness.quiet_now():

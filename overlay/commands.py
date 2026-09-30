@@ -20,7 +20,7 @@ What Rayo understands (wake word first, e.g. "Rayo, open claude"):
   next theme · bench mode · exit bench
   settings · wifi / bluetooth / sound / display settings
   lock · sleep · focus · help
-Power actions (shutdown/restart) are refused on purpose.
+Power actions (shut down, restart, sleep, log out) always ask "Are you sure?" first; only a clear yes goes ahead.
 """
 import os, re, time, glob, shutil, difflib, subprocess, urllib.parse
 
@@ -335,6 +335,25 @@ def _app_name(path):
     return os.path.basename(path)
 
 
+POWER = {"poweroff": [["systemctl", "poweroff"]], "reboot": [["systemctl", "reboot"]],
+         "suspend": [["systemctl", "suspend"]], "logout": [["gnome-session-quit", "--logout", "--no-prompt"]]}
+_IT = r"(?: (?:the|my))?(?: (?:computer|laptop|pc|machine|system|rayo|it))?(?: (?:now|please|right now))?"
+POWER_PHRASES = [
+    ("poweroff", rf"(?:shut ?down|power off|power down|turn off|switch off){_IT}|shut it down|shutdown"),
+    ("reboot", rf"(?:restart|reboot){_IT}"),
+    ("suspend", rf"(?:go to sleep|sleep|suspend|hibernate|sleep mode|put{_IT} (?:to|in|into) sleep)(?: (?:now|please))?"),
+    ("logout", r"(?:log ?out|sign ?out|log me out|sign me out)(?: (?:now|please))?"),
+]
+
+
+def power_action(t):
+    """'shut down the computer' → 'poweroff'. Whole-sentence match only, so 'how do I restart my router' is just a question."""
+    for action, pat in POWER_PHRASES:
+        if re.fullmatch(pat, t):
+            return action
+    return None
+
+
 QUESTION = re.compile(r"^(what|what's|whats|who|who's|why|how|when|where|which|is|are|can|could|should|"
                       r"do|does|did|will|would|was|were)\b")
 NOISE = {"the", "a", "huh", "uh", "um", "hmm", "and", "okay", "yes", "yeah", "oh"}
@@ -379,8 +398,10 @@ def resolve(text):
     t = clean(text)
     if not t:
         return plan("none", msg="didn't catch that")
-    if re.search(r"\b(shut ?down|power off|restart|reboot|turn off the computer)\b", t):
-        return plan("refuse", msg="power stays on the hub (safety)")
+    act = power_action(t)
+    if act:                                   # never acts on the first ask: she always checks first
+        import persona
+        return plan("ask", {"expect": "confirm", "action": act}, persona.confirm_question(act))
     if re.fullmatch(r"(what can you do|what do|what do you do|help|commands|what are your commands)", t) or t.startswith("help "):
         return plan("say", msg="try: open claude · open downloads · search for jollof rice · or just ask me anything")
     # memory (the Obsidian vault, overlay/memory.py)
@@ -394,6 +415,11 @@ def resolve(text):
     if compound(t):
         steps = _steps(t)                        # every piece understood -> just do them, no LLM needed
         return plan("multi", steps, "") if steps else _brain(t)
+    # things Rayo will not do: say so plainly (the model would otherwise claim it had)
+    if re.match(r"^(delete|erase|wipe|remove|trash|format|uninstall|empty)\b", t) and not t.startswith(("remove that", "remove the last")):
+        return plan("say", msg="I don't delete things. That one's for your own hands")
+    if re.match(r"^(send|text|whatsapp|email|message|dm|reply to|call|phone)\b", t):
+        return plan("say", msg="I can't send messages or make calls yet. that's coming soon")
     # awareness (overlay/awareness.py)
     if re.search(r"\b(status|system) report\b|^(how('?s| is) (the )?(system|laptop|computer|pc)( doing)?|system status|status)$", t):
         return plan("status")
@@ -432,6 +458,13 @@ def resolve(text):
         return plan("hud", "bench", "bench mode")
     if re.search(r"\b(next|change|switch|another|new) (the )?themes?\b|^themes?$", t):
         return plan("hud", "theme", "switching theme")
+    # personality
+    if re.search(r"\b(be nice|no sarcasm|stop being sarcastic|stop the sarcasm|turn off (the )?sarcasm|sarcasm off|be serious|be polite)\b", t):
+        return plan("persona", "off", "fine. sarcasm off. I'll be unbearably polite instead")
+    if re.search(r"\b(less sarcastic|tone it down|mild sarcasm|a bit less sarcastic|sarcasm (down|mild))\b", t):
+        return plan("persona", "mild", "mild sarcasm, then. a shame")
+    if re.search(r"\b(be sarcastic|sarcasm on|more sarcasm|full sarcasm|turn on (the )?sarcasm|sarcasm back)\b", t):
+        return plan("persona", "full", "sarcasm restored. you're welcome")
     # Rayo's own voice
     if re.search(r"\b(stop talking|be quiet|shut up|silent mode|mute yourself|don'?t (talk|speak)|stop speaking)\b", t):
         return plan("speech", False, "okay, captions only")
@@ -462,8 +495,6 @@ def resolve(text):
     # system
     if re.search(r"^lock( (the )?(screen|computer))?$", t):
         return plan("argv", [["loginctl", "lock-session"], ["gnome-screensaver-command", "-l"]], "locking")
-    if re.search(r"^(go to )?(sleep|suspend)$", t):
-        return plan("argv", [["systemctl", "suspend"]], "going to sleep")
     if re.search(r"\b(focus|do not disturb|quiet mode)\b", t):
         return plan("dnd", msg="focus toggled")
     # open / launch / go to
@@ -483,8 +514,17 @@ ORDINALS = {"first": 0, "second": 1, "third": 2, "fourth": 3, "last": -1,   # be
             "one": 0, "two": 1, "three": 2, "four": 3}                    # "the second one"
 
 
+YES = re.compile(r"\b(yes|yeah|yep|yup|sure|confirm|confirmed|do it|go ahead|affirmative|absolutely|i'?m sure|please do)\b")
+NO = re.compile(r"\b(no|nope|nah|don'?t|do not|cancel|stop|wait|never ?mind|negative|abort|not)\b")
+
+
 def answer(ctx, reply):
     """Turn the reply to Rayo's question (ctx from an 'ask' plan) into a plan."""
+    if ctx.get("expect") == "confirm":        # anything but a clear yes is a no
+        r = clean(reply)
+        if r and YES.search(r) and not NO.search(r):
+            return plan("power", ctx["action"], "")
+        return plan("none", msg="okay, cancelled" if r else "didn't hear a yes, so I'm staying on")
     r = clean(reply)
     if not r:
         return plan("none", msg="didn't catch that")
@@ -668,6 +708,12 @@ def execute(p):
             handler = subprocess.run(["xdg-mime", "query", "default", "x-scheme-handler/obsidian"],
                                      capture_output=True, text=True).stdout.strip()
             _popen(["xdg-open", memory.open_uri()]) if handler else _open_path(memory.vault())
+        elif k == "power":
+            if not _first_runnable(POWER[a]):
+                return "I couldn't do that on this system", None
+        elif k == "persona":
+            import persona
+            persona.set_level(a)
         elif k == "status":
             import awareness
             msg = awareness.report()

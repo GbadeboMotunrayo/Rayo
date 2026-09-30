@@ -52,7 +52,8 @@
     answer(t)  { caption(lastHeard, t, false, Math.max(5000, (t || '').split(' ').length * 420), false, true); },
     ask(q)     { setState('rv-on', 'rv-armed', 'rv-listening'); label('VOICE · ASKING');   // Rayo needs a detail
                  caption(q, 'listening…', false, 0, true); },
-    result(m)  { caption(lastHeard, m, isErr(m)); },
+    result(m)  { const long = (m || '').length > 46;                 // long replies wrap instead of running off-screen
+                 caption(lastHeard, m, isErr(m), long ? Math.max(4500, m.split(' ').length * 420) : 3200, false, long); },
     idle()     { setState('rv-on', 'rv-armed'); label('VOICE ARMED'); level(0); },
     error(m)   { setState('rv-on', 'rv-error'); label('VOICE ERROR'); caption('', m, true, 7000); },
     off()      { STATES.forEach((c) => root.classList.remove(c)); level(0); demo = false; },

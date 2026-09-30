@@ -109,13 +109,21 @@ def recall():
     return "I remember: " + "; ".join(last) + more
 
 
+RECALLISH = re.compile(r"\b(remember|told you|i said|i told|earlier|my|mine|pending|reminder)\b")
+
+
 def relevant(question, budget=900):
-    """Facts for the brain's prompt: ones sharing words with the question first, then the newest."""
+    """Facts for the brain's prompt: only ones that share a word with the question (or when the question is
+    about what you told her), so unrelated memories don't leak into answers."""
     items = facts()
-    words = {w for w in re.findall(r"[a-z]{3,}", question.lower())} - {"what", "the", "who", "how", "you", "and", "is"}
-    scored = sorted(range(len(items)), key=lambda i: (-len(words & set(re.findall(r"[a-z]{3,}", items[i].lower()))), -i))
+    stop = {"what", "the", "who", "how", "you", "and", "is", "are", "was", "did", "does", "for", "with", "tell", "about"}
+    words = set(re.findall(r"[a-z]{3,}", question.lower())) - stop
+    score = lambda i: len(words & set(re.findall(r"[a-z]{3,}", items[i].lower())))
+    ranked = [i for i in sorted(range(len(items)), key=lambda i: (-score(i), -i)) if score(i) > 0]
+    if not ranked and RECALLISH.search(question.lower()):
+        ranked = list(range(len(items) - 1, max(-1, len(items) - 4), -1))        # "what did I tell you": the newest few
     out, used = [], 0
-    for i in scored:
+    for i in ranked:
         if used + len(items[i]) > budget:
             break
         out.append(items[i]); used += len(items[i])

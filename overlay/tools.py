@@ -62,7 +62,7 @@ def to_plan(name, args):
         if not target:
             raise ValueError("open what?")
         if FORBIDDEN.search(target):                 # the hands never touch power, deleting or sending
-            raise ValueError("that's not something I'm allowed to do")
+            raise ValueError("that needs your confirmation. just say it to me directly, like: shut down")
         target = re.sub(r"^(?:the |my )?(.+?) (?:document|file)$", r"document \1", target)    # "readme document" → "document readme"
         target = re.sub(r"^(?:the |my )?(.+?) folder$", r"\1 folder", target)
         return commands._open_target(target)

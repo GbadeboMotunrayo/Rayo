@@ -23,7 +23,7 @@ SYSTEM = (
     "The user's words come from speech recognition and may be slightly misheard; answer what "
     "they most likely meant. Never repeat the user's words back as your answer. "
     "If you don't know something, or it needs live data you don't have, say so in one short sentence. "
-    "You cannot control the computer yourself. It is {time} on {date}. {live}"
+    "You cannot control the computer yourself. It is {time} on {date}. {live} {persona}"
 )
 
 _history, _last = [], [0.0]
@@ -57,6 +57,14 @@ def model():
     return chat[0] if chat else None
 
 
+def _persona():
+    try:
+        import persona
+        return persona.prompt()
+    except Exception:
+        return ""
+
+
 def _live():
     """A line of live facts from the HUD's own stats (weather, battery) so answers can use them."""
     try:
@@ -85,8 +93,12 @@ def warm():
     threading.Thread(target=go, daemon=True).start()
 
 
+EMOJI = re.compile("[\U0001F000-\U0001FAFF\u2600-\u27BF\uFE0F\u200d]")
+
+
 def _clean(text):
     text = re.sub(r"<think>.*?(</think>|$)", "", text, flags=re.S)   # older Ollama ignores think:false
+    text = EMOJI.sub("", text)                                       # she's spoken aloud: no emoji
     text = re.sub(r"[*_#`>]+", "", text)                             # stray markdown
     return re.sub(r"\s+", " ", text).strip()
 
@@ -100,7 +112,7 @@ def ask(question, on_text=None):
     if time.time() - _last[0] > MEMORY_TTL:
         _history.clear()
     system = SYSTEM.format(user=os.environ.get("USER", "the user"), date=time.strftime("%A %d %B %Y"),
-                           time=time.strftime("%-I:%M %p"), live=_live())
+                           time=time.strftime("%-I:%M %p"), live=_live(), persona=_persona())
     try:
         import memory
         known = memory.relevant(question)
@@ -138,10 +150,49 @@ def ask(question, on_text=None):
 
 ACTION = re.compile(r"\b(open|launch|start|run|go to|show|find|search|look up|google|check|play|pause|skip|next|previous|"
                     r"volume|louder|quieter|mute|unmute|remember|note|weather|rain|battery|status|take me)\b", re.I)
-TOOL_RULES = (" You can also use tools to act on the laptop. Use a tool only when the user asks you to DO something "
-              "(open, search, check, play, remember). For questions and chat, just answer in words. "
-              "Pick the tool by what they want: apps, folders, files and websites all use open. "
-              "You have no tool for power, deleting, sending or settings, so refuse those politely.")
+TOOL_RULES = (
+    " You can act on the laptop by choosing tools. First decide do_it: true if the user asks you to DO something "
+    "(open, find, search, check, play, remember), false for questions and chat. You CAN open apps, folders, files and "
+    "websites: never say you can't. Tools (arg in brackets):\n"
+    "- open [what to open]\n- search_web [search words]\n- weather [now, today, tonight or tomorrow]\n"
+    "- remember [the fact, in the user's words]\n- recall []\n- battery []\n- status []\n"
+    "- volume [up, down, mute or unmute]\n- media [play_pause, next or previous]\n"
+    "You have no tool for power, deleting, sending or settings.\n"
+    "Examples:\n"
+    "user: turn it up a bit -> do_it true, calls: volume up\n"
+    "user: next track please -> do_it true, calls: media next\n"
+    "user: take me to netflix -> do_it true, calls: open netflix\n"
+    "user: pull up the tech folder -> do_it true, calls: open tech folder\n"
+    "user: what's the forecast for tomorrow -> do_it true, calls: weather tomorrow\n"
+    "user: what have i asked you to remember -> do_it true, calls: recall\n"
+    "user: how are my system resources -> do_it true, calls: status\n"
+    "user: open chrome and search for cheap flights -> do_it true, calls: open chrome; search_web cheap flights\n"
+    "user: remember that tolu's birthday is in may -> do_it true, calls: remember tolu's birthday is in may\n"
+    "user: how old is the universe -> do_it false, calls: none, reply: about 13.8 billion years.")
+PLAN_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "do_it": {"type": "boolean"},
+        "calls": {"type": "array", "maxItems": 3, "items": {"type": "object", "properties": {
+            "tool": {"type": "string", "enum": ["open", "search_web", "weather", "remember", "recall", "battery",
+                                               "status", "volume", "media"]},
+            "arg": {"type": "string"}}, "required": ["tool", "arg"]}},
+        "reply": {"type": "string"}},
+    "required": ["do_it", "calls", "reply"]}
+ARG_KEY = {"open": "target", "search_web": "query", "weather": "when", "remember": "fact", "volume": "action", "media": "action"}
+
+
+CLAIMS = re.compile(r"\b(will be|i'?ll|i will|has been|have been|is being|opened|opening|done|sent|deleted|shutting|shut down|"
+                    r"turned|turning|i can'?t|i cannot|sorry)\b|^(shutting|deleting|sending|opening|playing|skipping|turning|launching|"
+                    r"searching|closing|restarting|muting|pausing)\b", re.I)
+
+
+def tools_enabled():
+    """Model tool-use is OFF by default: Qwen 1.7B picked the right tool for only 12 of 20 test phrases and sometimes
+    claimed actions it never took. Rules (commands.py) handle the common cases. Turn on with
+    {"brain": {"tools": true}} once you run a stronger model."""
+    import config
+    return bool(config.get("brain", "tools", False))
 
 
 def wants_action(q):
@@ -151,18 +202,16 @@ def wants_action(q):
 
 
 def act(question, on_text=None):
-    """Like ask(), but the model may call Rayo's tools (tools.py). Returns
-    {"text": answer, "calls": [...]}: run the calls, or speak the text."""
-    import tools
+    """Like ask(), but the model may choose Rayo's tools (tools.py). The model is forced to answer in a fixed
+    JSON shape, so it can only name a real tool (native tool-calling is unreliable on small models).
+    Returns {"text": answer, "calls": [...]}: run the calls, or speak the text."""
     m = model()
-    if not m:
-        return {"text": ask(question, on_text), "calls": []}
-    if not wants_action(question):
+    if not m or not wants_action(question):
         return {"text": ask(question, on_text), "calls": []}
     if time.time() - _last[0] > MEMORY_TTL:
         _history.clear()
     system = SYSTEM.format(user=os.environ.get("USER", "the user"), date=time.strftime("%A %d %B %Y"),
-                           time=time.strftime("%-I:%M %p"), live=_live()) + TOOL_RULES
+                           time=time.strftime("%-I:%M %p"), live=_live(), persona=_persona()) + TOOL_RULES
     try:
         import memory
         known = memory.relevant(question)
@@ -170,20 +219,25 @@ def act(question, on_text=None):
         known = []
     if known:
         system += "\nThings the user told you to remember:\n- " + "\n- ".join(known)
-    body = {"model": m, "messages": [{"role": "system", "content": system}] + _history
-            + [{"role": "user", "content": question}], "tools": tools.schema(), "stream": False, "think": False,
-            "keep_alive": KEEP_ALIVE, "options": {"num_ctx": 2048, "num_predict": 160, "temperature": 0.2}}
+    body = {"model": m, "messages": [{"role": "system", "content": system}, {"role": "user", "content": question}],
+            "format": PLAN_SCHEMA, "stream": False, "think": False, "keep_alive": KEEP_ALIVE,
+            "options": {"num_ctx": 2048, "num_predict": 200, "temperature": 0}}
     try:
         with _req("/api/chat", body, timeout=60) as r:
-            msg = json.load(r).get("message", {})
-    except OSError as e:
+            raw = json.load(r).get("message", {}).get("content", "")
+        plan = json.loads(raw)
+    except (OSError, ValueError) as e:
         return {"text": "I'm thinking too slowly right now, the laptop is short on memory. try again in a moment"
-                if "timed out" in str(e) else f"my brain didn't answer ({e.__class__.__name__})", "calls": []}
-    calls = msg.get("tool_calls") or []
-    if not calls and "<tool_call>" in (msg.get("content") or ""):          # older templates print the call as text
-        calls = [{"function": c} for c in _text_calls(msg["content"])]
-    text = _clean(msg.get("content", ""))
+                if isinstance(e, OSError) else "I didn't quite get that. try again", "calls": []}
+    calls = []
+    for c in plan.get("calls", [])[:3]:
+        name, arg = c.get("tool"), str(c.get("arg", "")).strip()
+        calls.append({"function": {"name": name, "arguments": {ARG_KEY[name]: arg} if name in ARG_KEY else {}}})
+    text = _clean(plan.get("reply", ""))
     _last[0] = time.time()
+    if not calls and (not text or CLAIMS.search(text)):
+        # it didn't pick a tool, and what it said claims an action happened (nothing did): answer normally instead
+        return {"text": ask(question, on_text), "calls": []}
     if not calls:
         _history.extend([{"role": "user", "content": question}, {"role": "assistant", "content": text or "I don't have an answer for that."}])
         del _history[:-MEMORY_TURNS * 2]

@@ -183,9 +183,19 @@ Just answer; no wake word is needed. It asks at most twice, and "cancel" or
 "search".
 
 Apps and folders are discovered from your machine, so new ones work without
-changes. Power actions (shutdown/restart) stay on the hub, by design: a
-misheard word must never turn your machine off. The full grammar lives in
-[`overlay/commands.py`](overlay/commands.py).
+changes. The full grammar lives in [`overlay/commands.py`](overlay/commands.py).
+
+**Power by voice always asks first.** Say "shut down", "restart", "go to sleep"
+or "log out" and Rayo asks *"Are you sure you want to shut down? Say yes or no."*
+Only a clear yes goes ahead. "No", "maybe", silence, or anything muffled cancels.
+Only a whole-sentence command counts, so "how do I restart my router" is just a
+question. The brain's tools can never trigger power: only this confirmed path can.
+
+**Personality.** Rayo is dry and sarcastic by default, in the JARVIS / TARS mould.
+The real answer always comes first and is never changed; the wit is added around
+it, never aimed at you personally, and dropped for critical alerts. Say
+**"be nice"** (off), **"less sarcastic"** (mild) or **"be sarcastic"** (full), or set
+`{"persona": {"sarcasm": "mild"}}` in `~/.config/rayo/config.json`.
 
 ### The brain (optional)
 
@@ -211,11 +221,15 @@ ollama pull gemma3:1b        # ~800MB; any chat model works
 
 ### Hands: the brain can act (safely)
 
-For messy or multi-step requests ("pull up my downloads and tell me if it'll rain
-tonight") Rayo first splits the sentence and runs each piece through the normal
-commands, with no LLM needed. If a piece isn't a known command, the brain gets a
-short list of tools (`overlay/tools.py`): `open`, `search_web`, `weather`,
-`remember`, `recall`, `battery`, `volume`, `media`, `status`.
+Multi-step requests ("pull up my downloads and tell me if it'll rain tonight") are
+split and each piece runs through the normal commands, with no LLM needed. An
+action Rayo has no command for gets an honest "I don't know how to do that yet".
+
+The brain can also pick from a short tool list (`overlay/tools.py`: `open`,
+`search_web`, `weather`, `remember`, `recall`, `battery`, `volume`, `media`,
+`status`), but this is **off by default**: the 1.7B model chose the right tool for
+only 12 of 20 test phrases and sometimes claimed actions it never took. Turn it
+on with `{"brain": {"tools": true}}` if you run a stronger model.
 
 There is deliberately **no tool for power, deleting, sending, shell or settings**,
 and `open` refuses those words outright, so a confused small model cannot do harm.
