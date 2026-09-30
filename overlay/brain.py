@@ -136,6 +136,70 @@ def ask(question, on_text=None):
     return answer
 
 
+ACTION = re.compile(r"\b(open|launch|start|run|go to|show|find|search|look up|google|check|play|pause|skip|next|previous|"
+                    r"volume|louder|quieter|mute|unmute|remember|note|weather|rain|battery|status|take me)\b", re.I)
+TOOL_RULES = (" You can also use tools to act on the laptop. Use a tool only when the user asks you to DO something "
+              "(open, search, check, play, remember). For questions and chat, just answer in words. "
+              "Pick the tool by what they want: apps, folders, files and websites all use open. "
+              "You have no tool for power, deleting, sending or settings, so refuse those politely.")
+
+
+def wants_action(q):
+    """Only offer tools when the request sounds like an action; a 1.7B model given tools for
+    'why is the sky blue' may call one anyway."""
+    return bool(ACTION.search(q))
+
+
+def act(question, on_text=None):
+    """Like ask(), but the model may call Rayo's tools (tools.py). Returns
+    {"text": answer, "calls": [...]}: run the calls, or speak the text."""
+    import tools
+    m = model()
+    if not m:
+        return {"text": ask(question, on_text), "calls": []}
+    if not wants_action(question):
+        return {"text": ask(question, on_text), "calls": []}
+    if time.time() - _last[0] > MEMORY_TTL:
+        _history.clear()
+    system = SYSTEM.format(user=os.environ.get("USER", "the user"), date=time.strftime("%A %d %B %Y"),
+                           time=time.strftime("%-I:%M %p"), live=_live()) + TOOL_RULES
+    try:
+        import memory
+        known = memory.relevant(question)
+    except Exception:
+        known = []
+    if known:
+        system += "\nThings the user told you to remember:\n- " + "\n- ".join(known)
+    body = {"model": m, "messages": [{"role": "system", "content": system}] + _history
+            + [{"role": "user", "content": question}], "tools": tools.schema(), "stream": False, "think": False,
+            "keep_alive": KEEP_ALIVE, "options": {"num_ctx": 2048, "num_predict": 160, "temperature": 0.2}}
+    try:
+        with _req("/api/chat", body, timeout=60) as r:
+            msg = json.load(r).get("message", {})
+    except OSError as e:
+        return {"text": "I'm thinking too slowly right now, the laptop is short on memory. try again in a moment"
+                if "timed out" in str(e) else f"my brain didn't answer ({e.__class__.__name__})", "calls": []}
+    calls = msg.get("tool_calls") or []
+    if not calls and "<tool_call>" in (msg.get("content") or ""):          # older templates print the call as text
+        calls = [{"function": c} for c in _text_calls(msg["content"])]
+    text = _clean(msg.get("content", ""))
+    _last[0] = time.time()
+    if not calls:
+        _history.extend([{"role": "user", "content": question}, {"role": "assistant", "content": text or "I don't have an answer for that."}])
+        del _history[:-MEMORY_TURNS * 2]
+    return {"text": text or "I don't have an answer for that.", "calls": calls}
+
+
+def _text_calls(content):
+    out = []
+    for blob in re.findall(r"<tool_call>\s*(\{.*?\})\s*</tool_call>", content, flags=re.S):
+        try:
+            out.append(json.loads(blob))
+        except ValueError:
+            pass
+    return out
+
+
 if __name__ == "__main__":                                  # python3 brain.py "why is the sky blue"
     import sys
     print("model:", model())

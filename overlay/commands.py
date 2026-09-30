@@ -252,7 +252,7 @@ def _open_target(t, verb="open"):
     t = _strip_articles(t)
     if not t:
         return plan("none", msg="open what?")
-    if t in ("memory", "my memory", "your memory", "vault", "my vault", "the vault", "notes", "my notes"):
+    if re.fullmatch(r"(?:(?:the|my|your|rayo'?s?) )?(?:obsidian )?(?:vault|memory|notes)", t):
         return plan("vault", msg="opening memory")
     # missing detail -> ask a follow-up question
     if t in ("document", "file", "document file"):
@@ -340,6 +340,34 @@ QUESTION = re.compile(r"^(what|what's|whats|who|who's|why|how|when|where|which|i
 NOISE = {"the", "a", "huh", "uh", "um", "hmm", "and", "okay", "yes", "yeah", "oh"}
 
 
+ACTIONISH = re.compile(r"\b(open|launch|pull up|bring up|start|play|pause|search|look up|find|check|weather|rain|forecast|"
+                       r"battery|volume|louder|quieter|mute|status|remember|show|next|previous|skip|resume)\b")
+
+
+def compound(t):
+    """'open downloads and check the weather': two actions in one breath. The brain picks the tools."""
+    parts = re.split(r"\b(?:and then|and also|and|then|also)\b|[,;]", t)
+    return len(parts) >= 2 and sum(1 for p in parts if ACTIONISH.search(p)) >= 2
+
+
+MULTI_OK = {"app", "open", "open_many", "url", "volume", "media", "weather", "battery", "temp", "status",
+            "say", "remember", "recall", "hud", "vault", "speech", "alerts"}
+
+
+def _steps(t):
+    """Split 'open x and check y' into plans; None unless every piece is a plain, safe command."""
+    plans = []
+    for part in re.split(r"\b(?:and then|and also|and|then|also)\b|[,;]", t):
+        part = re.sub(r"^(?:please |could you |can you )?(?:tell me|let me know|give me)(?: about)?(?: the)? ", "", part.strip())
+        if not part:
+            continue
+        p = resolve(part)
+        if p["kind"] not in MULTI_OK:
+            return None
+        plans.append(p)
+    return plans if len(plans) >= 2 and len(plans) <= 3 else None
+
+
 def _brain(q):
     """No command matched: ask the local LLM (overlay/brain.py). Talk only, never act."""
     if q in NOISE or len(q) < 4:
@@ -363,6 +391,16 @@ def resolve(text):
         return plan("forget")
     if re.fullmatch(r"(what do you (remember|know about me)|what have i told you|what('?s| is) in your memory)", t):
         return plan("recall")
+    if compound(t):
+        steps = _steps(t)                        # every piece understood -> just do them, no LLM needed
+        return plan("multi", steps, "") if steps else _brain(t)
+    # awareness (overlay/awareness.py)
+    if re.search(r"\b(status|system) report\b|^(how('?s| is) (the )?(system|laptop|computer|pc)( doing)?|system status|status)$", t):
+        return plan("status")
+    if re.search(r"\b(stop|disable|no more|turn off|silence)\b.*\b(alerts?|warnings?|notifications?)\b", t):
+        return plan("alerts", False, "okay, no more alerts")
+    if re.search(r"\b(alerts?|warnings?)\b.*\b(on|back|enable)\b|\b(start|enable|turn on)\b.*\b(alerts?|warnings?)\b", t):
+        return plan("alerts", True, "alerts on. I'll speak up if something needs you")
     # weather (before the brain: questions about rain are live data, not trivia)
     if re.search(r"\b(weather|forecast|rain(ing|y)?|umbrella|sunny|cold outside|hot outside|temperature outside|outside temperature|outside)\b", t) \
             and not re.match(r"^(tell me about|explain|define|describe|write|summari[sz]e|what (is|are) (a |an )?(rain|weather) ?(forest|cycle|pattern)s?)\b", t):
@@ -412,7 +450,7 @@ def resolve(text):
         return plan("media", "Next", "next track")
     if re.search(r"\b(previous|last) (song|track)\b", t):
         return plan("media", "Previous", "previous track")
-    if re.search(r"^(play|pause|resume|stop)( (the )?(music|song|video|it))?$", t):
+    if re.search(r"^(play|pause|resume|stop)( (some |the |my )?(music|songs?|videos?|it|something))?$", t):
         return plan("media", "PlayPause", "play / pause")
     # search the web
     if re.fullmatch(r"(search|google|look up)( for)?( something)?", t):
@@ -581,6 +619,14 @@ def execute(p):
     if k == "brain":
         import brain
         return brain.ask(a), None
+    if k == "multi":                                 # several commands in one sentence
+        msgs, huds = [], []
+        for step in a:
+            m, h = execute(step)
+            msgs.append(m)
+            if h:
+                huds.append(h)
+        return "; ".join(msgs), (huds[0] if huds else None)
     try:
         if k == "app":
             _popen(["gio", "launch", a])
@@ -622,6 +668,12 @@ def execute(p):
             handler = subprocess.run(["xdg-mime", "query", "default", "x-scheme-handler/obsidian"],
                                      capture_output=True, text=True).stdout.strip()
             _popen(["xdg-open", memory.open_uri()]) if handler else _open_path(memory.vault())
+        elif k == "status":
+            import awareness
+            msg = awareness.report()
+        elif k == "alerts":
+            import config
+            config.set("awareness", "on", bool(a))
         elif k == "speech":
             import config
             config.set("speech", "on", bool(a))

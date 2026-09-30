@@ -2,7 +2,7 @@
    Rayo · voice visuals — the reactor is the voice interface.
    The desktop overlay streams the listener's events here:
      starting · armed · listening · level <0..1> · heard <text> ·
-     ask <question> · thinking · say <partial answer> · speaking · answer <text> · result <msg> · idle · error <msg> · off
+     ask <question> · thinking · say <partial answer> · speaking · alert <message> · answer <text> · result <msg> · idle · error <msg> · off
    window.RayoVoice.on(kind, payload) is the single entry point.
    In a plain browser (no overlay) RayoVoice.demo() plays a clearly
    labelled scripted run so the look can be previewed.
@@ -23,7 +23,7 @@
   }
   function caption(said, res, err, hold = 3200, asking = false, talking = false) {
     const c = $('vcap'); if (!c) return;
-    c.classList.toggle('talk', talking);
+    c.classList.toggle('talk', talking); if (!talking) c.classList.remove('alert');
     c.querySelector('.said').textContent = !said ? '' : asking ? said : `“${said}”`;
     c.classList.toggle('ask', asking);
     c.querySelector('.res').textContent = res || '';
@@ -44,6 +44,9 @@
     heard(t)   { lastHeard = t || ''; },
     thinking() { setState('rv-on', 'rv-armed', 'rv-thinking'); label('VOICE · THINKING'); level(0);
                  caption(lastHeard, 'thinking…', false, 0); },
+    alert(m)   { const c = $('vcap'); if (!c) return;                              // Rayo speaking up first
+                 caption('', m, false, Math.max(7000, (m || '').split(' ').length * 450), false, true);
+                 c.classList.add('alert'); setTimeout(() => c.classList.remove('alert'), 600 + Math.max(7000, (m || '').split(' ').length * 450)); },
     speaking() { setState('rv-on', 'rv-armed', 'rv-speaking'); label('VOICE · SPEAKING'); },   // reactor pulses with Rayo's voice
     say(t)     { caption(lastHeard, t, false, 0, false, true); },               // answer streaming in
     answer(t)  { caption(lastHeard, t, false, Math.max(5000, (t || '').split(' ').length * 420), false, true); },

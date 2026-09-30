@@ -209,6 +209,35 @@ ollama pull gemma3:1b        # ~800MB; any chat model works
   model Ollama has. To choose one, set `RAYO_BRAIN_MODEL`, or put
   `{"brain": {"model": "qwen3:1.7b"}}` in `~/.config/rayo/config.json`.
 
+### Hands: the brain can act (safely)
+
+For messy or multi-step requests ("pull up my downloads and tell me if it'll rain
+tonight") Rayo first splits the sentence and runs each piece through the normal
+commands, with no LLM needed. If a piece isn't a known command, the brain gets a
+short list of tools (`overlay/tools.py`): `open`, `search_web`, `weather`,
+`remember`, `recall`, `battery`, `volume`, `media`, `status`.
+
+There is deliberately **no tool for power, deleting, sending, shell or settings**,
+and `open` refuses those words outright, so a confused small model cannot do harm.
+At most three actions run per sentence. Unknown or malformed tool calls are refused.
+
+### Awareness: Rayo speaks up first
+
+While VOICE is on, Rayo checks every 30 seconds and speaks only when something
+needs you (each alert has its own cooldown, so she doesn't nag):
+
+| Alert | When |
+|-------|------|
+| Battery | 20%, 10%, 5% while unplugged; "fully charged" at 100% |
+| Heat | CPU at 88°C+ for two checks, naming the app using it |
+| Memory | under ~450MB free or swap almost full, naming the biggest app |
+| Rain | 70%+ chance in the next three hours |
+
+Alerts show in gold on the HUD. Quiet hours (23:00 to 07:00) show but don't speak.
+Say **"status report"** any time for battery, temperature, memory, the biggest app
+and the weather in one breath. **"stop alerts"** / **"alerts on"** switch them.
+Settings: `{"awareness": {"on": true, "quiet": ["23:00", "07:00"]}}`.
+
 ### Memory (an Obsidian vault)
 
 Rayo's memory is plain Markdown in `~/Documents/Rayo`, a folder that opens as

@@ -137,11 +137,28 @@ def report(text, model=None, q=None):
         p = commands.answer(p["arg"], reply)
     if p["kind"] == "ask":
         p = commands.plan("none", msg="okay, never mind")
-    if p["kind"] == "brain":                    # no command matched: think, streaming to the HUD
-        import brain
-        import speech
+    if p["kind"] == "brain":                    # no command matched: think (and maybe act)
+        import brain, speech, tools
         emit("thinking", "")
-        spoken = speech.Sentences(speaker())      # speak each sentence as soon as it's complete
+        if brain.wants_action(p["arg"]):        # action-sounding: the brain may pick tools
+            r = brain.act(p["arg"])
+            if r["calls"]:
+                msg, huds = tools.run(r["calls"])
+                for h in huds:
+                    emit("do", h)
+                msg = msg or r["text"]
+                emit("result", msg)
+                remember_exchange(text, msg)
+                notify(f"“{text}” → {msg}")
+                speak(msg)
+                return
+            msg = r["text"]                     # it just talked: show it, then say it
+            emit("answer", msg)
+            remember_exchange(text, msg)
+            notify(msg)
+            speak(msg)
+            return
+        spoken = speech.Sentences(speaker())      # a question: speak each sentence as soon as it's complete
 
         def partial(t):
             emit("say", t)
@@ -348,6 +365,8 @@ def wake_loop():
 
     with open_stream(q) as mic:               # ONE mic stream for everything
         emit("armed"); notify("Rayo is listening — say “Rayo”")
+        import awareness
+        watcher = awareness.Watcher()
         whisper_warm()                          # Whisper loads in the background (~2s)
         speak("Rayo online.")                   # also loads the voice (~4s) before you need it
         drain(q)                                # ...and it said "Rayo": don't wake on that
@@ -359,6 +378,13 @@ def wake_loop():
                 if not mic.alive():
                     fail("microphone stopped — is a mic connected and unmuted?")
                 continue
+            for kind, alert in watcher.tick():      # she speaks up first (battery, heat, memory, rain)
+                emit("alert", alert)
+                notify("Rayo: " + alert)
+                if not awareness.quiet_now():
+                    speak(alert)
+                drain(q)                            # never hear herself as a wake word
+                emit("idle")
             if rec.AcceptWaveform(data) and is_wake(rec.Result()):
                 chime(); emit("listening")
                 brain_warm()                    # load the LLM while you speak (no-op without Ollama)
