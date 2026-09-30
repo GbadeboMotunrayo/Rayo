@@ -23,7 +23,7 @@ SYSTEM = (
     "The user's words come from speech recognition and may be slightly misheard; answer what "
     "they most likely meant. Never repeat the user's words back as your answer. "
     "If you don't know something, or it needs live data you don't have, say so in one short sentence. "
-    "You cannot control the computer yourself. It is {time} on {date}. {live} {persona}"
+    "You cannot control the computer yourself. It is {time} on {date}. {live} {persona} {soul}"
 )
 
 _history, _last = [], [0.0]
@@ -55,6 +55,14 @@ def model():
             return p
     chat = [n for n in names if "embed" not in n]          # skip embedding-only models
     return chat[0] if chat else None
+
+
+def _soul():
+    try:
+        import soul
+        return soul.prompt()
+    except Exception:
+        return ""
 
 
 def _persona():
@@ -112,7 +120,7 @@ def ask(question, on_text=None):
     if time.time() - _last[0] > MEMORY_TTL:
         _history.clear()
     system = SYSTEM.format(user=os.environ.get("USER", "the user"), date=time.strftime("%A %d %B %Y"),
-                           time=time.strftime("%-I:%M %p"), live=_live(), persona=_persona())
+                           time=time.strftime("%-I:%M %p"), live=_live(), persona=_persona(), soul=_soul())
     try:
         import memory
         known = memory.relevant(question)
@@ -211,7 +219,7 @@ def act(question, on_text=None):
     if time.time() - _last[0] > MEMORY_TTL:
         _history.clear()
     system = SYSTEM.format(user=os.environ.get("USER", "the user"), date=time.strftime("%A %d %B %Y"),
-                           time=time.strftime("%-I:%M %p"), live=_live(), persona=_persona()) + TOOL_RULES
+                           time=time.strftime("%-I:%M %p"), live=_live(), persona=_persona(), soul=_soul()) + TOOL_RULES
     try:
         import memory
         known = memory.relevant(question)

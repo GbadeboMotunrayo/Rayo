@@ -27,3 +27,14 @@ def set(section, key, value):
     with open(tmp, "w") as f:
         json.dump(cfg, f, indent=2)
     os.replace(tmp, PATH)
+
+
+def update(section, values):
+    """Set several keys of one section in a single write."""
+    cfg = load()
+    cfg.setdefault(section, {}).update(values)
+    os.makedirs(os.path.dirname(PATH), exist_ok=True)
+    tmp = PATH + ".tmp"
+    with open(tmp, "w") as f:
+        json.dump(cfg, f, indent=2)
+    os.replace(tmp, PATH)

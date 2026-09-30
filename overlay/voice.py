@@ -92,6 +92,11 @@ def speaker():
 
 
 def speak(text):
+    try:
+        import soul
+        soul.spoke(text)                        # so "say that again" can repeat it
+    except Exception:
+        pass
     spk = speaker()
     spk.say(text)
     spk.wait()
@@ -119,6 +124,22 @@ def drain(q):
 
 
 def report(text, model=None, q=None):
+    """One conversation turn, plus the relationship bookkeeping: she counts it and marks milestones."""
+    try:
+        return _report(text, model, q)
+    finally:
+        if text:
+            try:
+                import soul
+                line = soul.touch()
+                if line:
+                    emit("answer", line)
+                    speak(line)
+            except Exception:
+                pass
+
+
+def _report(text, model=None, q=None):
     """Run a command. If Rayo needs a detail ("which document?") it asks and
     hears the answer on the same open mic, no wake word needed."""
     emit("heard", text)
@@ -193,6 +214,11 @@ def report(text, model=None, q=None):
         commands.execute(p)
         return
     msg, hud = commands.execute(p)
+    try:
+        import soul
+        soul.note(p["kind"], p["arg"])           # context for "and tomorrow?"
+    except Exception:
+        pass
     if p["kind"] not in ("multi", "power"):
         import persona
         msg = persona.flavor(p["kind"], msg)   # sarcasm goes around the answer, never instead of it
@@ -394,7 +420,8 @@ def wake_loop():
         watcher = awareness.Watcher()
         whisper_warm()                          # Whisper loads in the background (~2s)
         import persona
-        speak(persona.greeting())               # also loads the voice (~4s) before you need it
+        import soul
+        speak(soul.greeting())                  # also loads the voice (~4s) before you need it
         drain(q)                                # ...and it said "Rayo": don't wake on that
         rec = wake_rec()
         while not STOP["v"]:

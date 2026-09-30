@@ -252,6 +252,30 @@ Say **"status report"** any time for battery, temperature, memory, the biggest a
 and the weather in one breath. **"stop alerts"** / **"alerts on"** switch them.
 Settings: `{"awareness": {"on": true, "quiet": ["23:00", "07:00"]}}`.
 
+### Soul: she has a character, a mood and a history with you
+
+Rayo's character is a short first-person Markdown note in your vault,
+`Soul.md`, and what she knows about you is `Owner.md`. Edit either and she
+changes (a trimmed `Soul.md` is part of the brain's prompt).
+
+- **Small talk as data** (`overlay/soul_lines.json`, ~35 topics): who she is, what
+  RAYO means, who built her, whether she's alive, Siri vs Alexa vs JARVIS, jokes,
+  thanks, compliments, insults, goodnight, and more. Add your own in
+  `~/.config/rayo/lines.json` (same format; yours win). Triggers use a compact
+  template syntax: `(who|what) are you [really]`.
+- **Real moods.** Ask "how are you?" and the answer comes from the laptop: cramped
+  when memory is low, feverish when hot, running on fumes at low battery, sharp in
+  the morning, mellow at night.
+- **A relationship.** She counts your conversations and days together ("how long
+  have we known each other?"), marks milestones, and greets you differently the
+  first time, after a long absence, and at 3 a.m.
+- **Follow-ups.** "And tomorrow?" after a forecast. "Say that again" repeats her
+  last answer. "Not now" snoozes alerts for an hour (only a nearly dead battery
+  gets through).
+- **She knows when not to joke.** "I'm sad" or "I had a rough day" gets kindness,
+  not sarcasm, and anything about self-harm gets a caring reply that points you to
+  a real person.
+
 ### Memory (an Obsidian vault)
 
 Rayo's memory is plain Markdown in `~/Documents/Rayo`, a folder that opens as
@@ -283,6 +307,15 @@ themes and build time:
 Starring the repo, filing issues, and sending theme PRs help just as much.
 
 ## Credits
+
+Rayo's soul was designed after studying open-source assistants (ideas only, no code
+copied): [Leon](https://github.com/leon-ai/leon) (MIT) for identity as a Markdown
+file, living moods, layered memory and proactive alerts that back off;
+[Mycroft personality skill](https://github.com/tiradoe/mycroft-personality-skill) (MIT)
+for personality as trigger-and-reply data;
+[HassIL](https://github.com/home-assistant/hassil) (Apache-2) for compact phrase
+templates; and [OpenVoiceOS](https://github.com/OpenVoiceOS/ovos-core) (Apache-2) for
+the order of context, then rules, then the LLM last.
 
 The living-orb technique and glass-panel recipe were studied from
 [JashanMaan28/Zorin](https://github.com/JashanMaan28/Zorin) (MIT). Arc-reactor

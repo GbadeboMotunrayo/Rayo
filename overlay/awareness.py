@@ -31,6 +31,10 @@ def enabled():
     return bool(config.get("awareness", "on", True))
 
 
+def snoozed():
+    return time.time() < float(config.get("awareness", "snooze_until", 0))
+
+
 def quiet_now():
     q = config.get("awareness", "quiet", ["23:00", "07:00"])
     try:
@@ -166,6 +170,8 @@ class Watcher:
             pass
         if self.rain_msgs:                  # fetched in the background, delivered here
             alerts += self.rain_msgs; self.rain_msgs = []
+        if snoozed():                       # "not now": only a nearly-dead battery gets through
+            alerts = [a for a in alerts if a[0] == "battery" and re.search(r"\b(10|9|8|7|6|5|4|3|2|1) percent", a[1])]
         if not self.rain_thread or not self.rain_thread.is_alive():
             self.rain_thread = threading.Thread(target=lambda: self.rain_msgs.extend(rain_alert()), daemon=True)
             self.rain_thread.start()

@@ -395,9 +395,16 @@ def _brain(q):
 
 
 def resolve(text):
+    import soul
+    small = soul.match(text)                      # small talk first: "thank you" would be stripped by clean(), "who are you" would reach the brain
+    if small:
+        return plan("soul", None, small)
     t = clean(text)
     if not t:
         return plan("none", msg="didn't catch that")
+    fu = soul.followup(t)                         # "and tomorrow?" after a forecast, "say that again"
+    if fu:
+        return plan("soul", None, fu[1]) if fu[0] == "repeat" else plan("weather", fu[1], "checking the weather")
     act = power_action(t)
     if act:                                   # never acts on the first ask: she always checks first
         import persona
@@ -458,6 +465,9 @@ def resolve(text):
         return plan("hud", "bench", "bench mode")
     if re.search(r"\b(next|change|switch|another|new) (the )?themes?\b|^themes?$", t):
         return plan("hud", "theme", "switching theme")
+    # soul: follow-up context and small talk are handled at the top of resolve()
+    if re.fullmatch(r"(?:not now|snooze (?:the )?alerts?(?: for (?:an|one) hour)?|ignore (?:that|the alert)|quiet for an hour)", t):
+        return plan("snooze", msg="okay, quiet for an hour. I'll keep watching, silently")
     # personality
     if re.search(r"\b(be nice|no sarcasm|stop being sarcastic|stop the sarcasm|turn off (the )?sarcasm|sarcasm off|be serious|be polite)\b", t):
         return plan("persona", "off", "fine. sarcasm off. I'll be unbearably polite instead")
@@ -711,6 +721,11 @@ def execute(p):
         elif k == "power":
             if not _first_runnable(POWER[a]):
                 return "I couldn't do that on this system", None
+        elif k == "snooze":
+            import config
+            config.set("awareness", "snooze_until", time.time() + 3600)
+        elif k == "soul":
+            pass                                     # the reply is already in msg
         elif k == "persona":
             import persona
             persona.set_level(a)
