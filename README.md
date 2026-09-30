@@ -113,6 +113,21 @@ overlay/stats.py  ── writes ──▶  hud/stats.json  ── polled 1s ─�
 - More hero themes (Batman, Halo/Cortana, Samus) via community PRs
 - Layer-shell backend for pixel-perfect anchoring on wlroots (Hyprland, sway)
 
+## Voice (optional)
+
+Talk to Rayo, offline and privately. It's **push-to-talk with zero idle cost** —
+nothing listens in the background; it wakes only when you trigger it, hears one
+command, runs it, and exits. Speech is recognised on-device via Vosk (~40MB, no
+cloud).
+
+```bash
+./voice-setup.sh    # one-time: venv + Vosk + small model, all under ~/.local (no sudo)
+```
+
+Trigger it from the hub (click the reactor -> **VOICE**) or bind a key to
+`overlay/voice.sh`. Commands: "open browser / files / terminal / settings /
+displays", "lock", "sleep", "focus". Power actions stay on the hub, by design.
+
 ## Support
 
 Rayo is free and always will be. If it made your desktop cooler, a tip funds new

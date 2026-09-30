@@ -62,6 +62,7 @@ ACTIONS = {
     "web":      [["firefox"], ["xdg-open", "https://duckduckgo.com"]],
     "settings": [["gnome-control-center"]],
     "displays": [["gnome-control-center", "display"]],
+    "voice":    [[os.path.join(HERE, "voice.sh")]],
 }
 
 

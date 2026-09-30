@@ -37,6 +37,7 @@
     { label: 'SLEEP',    act: 'suspend' },
     { label: 'RESTART',  act: 'reboot' },
     { label: 'SHUTDOWN', act: 'poweroff', danger: true },
+    { label: 'VOICE',    act: 'voice' },
     { label: 'THEME',    act: 'theme' },
   ];
   const RADIUS = 250;                       // px from hub centre (design space)
