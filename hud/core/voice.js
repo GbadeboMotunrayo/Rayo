@@ -44,6 +44,11 @@
     idle()     { setState('rv-on', 'rv-armed'); label('VOICE ARMED'); level(0); },
     error(m)   { setState('rv-on', 'rv-error'); label('VOICE ERROR'); caption('', m, true, 7000); },
     off()      { STATES.forEach((c) => root.classList.remove(c)); level(0); demo = false; },
+    do(cmd)    {                        // HUD-side voice commands
+      if (cmd === 'theme' && window.RayoTheme) window.RayoTheme.cycle();
+      else if (cmd === 'bench' && window.RayoControl) window.RayoControl.openBench();
+      else if (cmd === 'bench_off' && window.RayoControl) window.RayoControl.closeBench();
+    },
   };
 
   // scripted preview (browser only — no microphone, nothing runs)

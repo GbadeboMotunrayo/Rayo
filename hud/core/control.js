@@ -76,6 +76,8 @@
   const openBench  = () => { if (bench) { bench.classList.add('open'); bench.setAttribute('aria-hidden', 'false'); } };
   const closeBench = () => { if (bench) { bench.classList.remove('open'); bench.setAttribute('aria-hidden', 'true'); } };
   const toggleBench = () => { if (bench) bench.classList.contains('open') ? closeBench() : openBench(); };
+  // exposed so voice commands ("bench mode" / "exit bench") can drive it
+  window.RayoControl = { openBench, closeBench, toggleBench };
 
   function doAction(act) {
     // THEME cycles the look in-page and keeps the menu open so you can keep

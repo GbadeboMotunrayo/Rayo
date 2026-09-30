@@ -30,16 +30,6 @@ WAKE_GRAMMAR = ["rayo", "ray oh", "hey ray oh", "wake up"]
 WAKE_MATCH = ("rayo", "ray oh", "wake up")
 WAKE_MIN_CONF = 0.65                          # confidence gate vs false wakes
 
-COMMANDS = [
-    (("browser", "internet", "firefox", "web", "chrome"), [["firefox"], ["xdg-open", "https://duckduckgo.com"]]),
-    (("files", "file manager", "folder", "explorer"),     [["nautilus", "--new-window"], ["xdg-open", os.path.expanduser("~")]]),
-    (("terminal", "console", "shell"),                    [["ptyxis"], ["kgx"], ["gnome-terminal"], ["xterm"]]),
-    (("settings", "preferences"),                         [["gnome-control-center"]]),
-    (("display", "displays", "monitor", "screen"),        [["gnome-control-center", "display"]]),
-    (("lock", "lock screen"),                             [["loginctl", "lock-session"], ["gnome-screensaver-command", "-l"]]),
-    (("sleep", "suspend"),                                [["systemctl", "suspend"]]),
-]
-DND_WORDS = ("focus", "do not disturb", "quiet", "silence")
 STOP = {"v": False}
 
 
@@ -72,44 +62,17 @@ def fail(msg):
     emit("error", msg); notify(msg); emit("off"); sys.exit(1)
 
 
-# ---- actions ---------------------------------------------------------------
-def run(candidates):
-    for argv in candidates:
-        if shutil.which(argv[0]):
-            subprocess.Popen(argv, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
-            return True
-    return False
-
-
-def toggle_dnd():
-    try:
-        cur = subprocess.check_output(["gsettings", "get", "org.gnome.desktop.notifications", "show-banners"], text=True).strip()
-        subprocess.run(["gsettings", "set", "org.gnome.desktop.notifications", "show-banners",
-                        "false" if cur == "true" else "true"], check=False)
-        return True
-    except Exception:
-        return False
-
-
-def act_on(text):
-    """Run the command matching `text`; return a short human result."""
-    if not text:
-        return "didn't catch that"
-    for words, candidates in COMMANDS:
-        if any(w in text for w in words):
-            return f"opening {words[0]}" if run(candidates) else f"{words[0]} not available"
-    if any(w in text for w in DND_WORDS):
-        return "focus toggled" if toggle_dnd() else "focus unavailable"
-    if any(w in text for w in ("shut down", "shutdown", "restart", "reboot", "power off")):
-        return "power stays on the hub (safety)"
-    return "no matching command"
+# ---- actions (see commands.py for everything Rayo understands) ------------
+import commands
 
 
 def report(text):
     emit("heard", text)
-    result = act_on(text)
-    emit("result", result)
-    notify(f"“{text}” → {result}" if text else result)
+    msg, hud = commands.execute(commands.resolve(text))
+    if hud:
+        emit("do", hud)                        # HUD-side actions: theme, bench
+    emit("result", msg)
+    notify(f"“{text}” → {msg}" if text else msg)
 
 
 # ---- audio -----------------------------------------------------------------

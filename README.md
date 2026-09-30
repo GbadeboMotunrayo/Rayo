@@ -142,9 +142,29 @@ tap **VOICE**. Do the same to turn it off. The reactor shows you what's happenin
 | Heard | your words as a subtitle under the reactor, with the result beneath |
 | Problem | a red message under the reactor (e.g. "run ./voice-setup.sh") |
 
-Commands: "open browser / files / terminal / settings / displays", "lock",
-"sleep", "focus". Power actions (shutdown/restart) stay on the hub, by design —
-a misheard word must never turn your machine off.
+Say **"Rayo"**, wait for the chime, then:
+
+| Say | Rayo does |
+|-----|-----------|
+| "open claude" · "open obs" · "launch calculator" | opens **any installed app** by name |
+| "open browser" · "open files" · "open terminal" | your default browser, file manager, terminal |
+| "open documents" · "open downloads" · "open desktop" | your standard folders |
+| "open tech" · "open the carpadi folder" | **any folder** by name, fuzzy-matched |
+| "open downloads and tech" | several folders at once |
+| "open document readme" | a document by name |
+| "search for weather in lagos" | a web search |
+| "open youtube" · "go to github" · "open gmail" | common sites |
+| "volume up / down" · "mute" · "unmute" | sound |
+| "play" · "pause" · "next song" · "previous song" | any playing media |
+| "what time is it" · "what's the date" · "battery" · "temperature" | answers on the HUD |
+| "next theme" · "bench mode" · "exit bench" | the HUD itself |
+| "settings" · "wifi / bluetooth / sound / display settings" | system settings |
+| "lock" · "sleep" · "focus" · "help" | system |
+
+Apps and folders are discovered from your machine, so new ones work without
+changes. Power actions (shutdown/restart) stay on the hub, by design: a
+misheard word must never turn your machine off. The full grammar lives in
+[`overlay/commands.py`](overlay/commands.py).
 
 ## Support## Support
 
