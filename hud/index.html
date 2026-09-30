@@ -458,9 +458,9 @@ html.rayo-idle *::after{animation-play-state:paused!important}
 .clock .cring{position:absolute;border-radius:50%;
   -webkit-mask:radial-gradient(circle,transparent var(--i),#000 calc(var(--i) + .5px),#000 var(--o),transparent calc(var(--o) + 1px));
   mask:radial-gradient(circle,transparent var(--i),#000 calc(var(--i) + .5px),#000 var(--o),transparent calc(var(--o) + 1px))}
-.clock .full{inset:0;background:conic-gradient(rgb(var(--ice-rgb)/.28),rgb(var(--ice-rgb)/.28))}
-.clock .arc{inset:0;background:conic-gradient(from var(--f,0deg),var(--ice-bright),var(--ice) 60deg,rgb(var(--ice-rgb)/.1) 130deg,transparent 180deg)}
-.clock .tk{inset:0;background:repeating-conic-gradient(rgb(var(--ice-rgb)/.5) 0 .5deg,transparent .5deg 5deg)}
+.clock .full,.worb .full{inset:0;background:conic-gradient(rgb(var(--ice-rgb)/.28),rgb(var(--ice-rgb)/.28))}
+.clock .arc,.worb .arc{inset:0;background:conic-gradient(from var(--f,0deg),var(--ice-bright),var(--ice) 60deg,rgb(var(--ice-rgb)/.1) 130deg,transparent 180deg)}
+.clock .tk,.worb .tk{inset:0;background:repeating-conic-gradient(rgb(var(--ice-rgb)/.5) 0 .5deg,transparent .5deg 5deg)}
 .clock .face{position:absolute;inset:0;display:grid;place-content:center;text-align:center}
 .clock .face .h{font-size:44px;font-weight:800;color:var(--paper);line-height:1;letter-spacing:-1px}
 .clock .face .d{font-size:12px;letter-spacing:3px;color:var(--ice);margin-top:7px}
@@ -492,11 +492,13 @@ html.rayo-idle *::after{animation-play-state:paused!important}
 
 /* weather orb top-right */
 .worb{right:118px;top:120px;width:150px;height:150px}
+.worb::before{content:"";position:absolute;inset:-18px;border-radius:50%;pointer-events:none;
+  background:radial-gradient(circle, rgb(var(--ice-rgb)/.16), transparent 68%)}
 .worb .cring{position:absolute;border-radius:50%;
   -webkit-mask:radial-gradient(circle,transparent var(--i),#000 calc(var(--i) + .5px),#000 var(--o),transparent calc(var(--o) + 1px));
   mask:radial-gradient(circle,transparent var(--i),#000 calc(var(--i) + .5px),#000 var(--o),transparent calc(var(--o) + 1px))}
 .worb .face{position:absolute;inset:0;display:grid;place-content:center;text-align:center}
-.worb .face .deg{font-size:34px;font-weight:800;color:var(--paper)}
+.worb .face .deg{font-size:34px;font-weight:800;color:var(--paper);text-shadow:0 0 18px rgb(var(--ice-rgb)/.35)}
 .worb .face .c{font-size:10px;letter-spacing:2px;color:var(--ice);margin-top:2px}
 .worb .face .x{font-size:9px;letter-spacing:1px;color:var(--muted);margin-top:2px}
 
@@ -679,8 +681,11 @@ if (new URLSearchParams(location.search).get('obsSafe') === '1') {
 
   <!-- WEATHER ORB (top-right) -->
   <div class="cluster worb">
-    <div class="cring full" style="--i:64px;--o:70px"></div>
-    <div class="cring arc" style="--i:64px;--o:70px;--f:120deg"></div>
+    <div class="cring full" style="--i:65px;--o:70px"></div>
+    <div class="cring arc" style="--i:65px;--o:70px;--f:120deg"></div>
+    <div class="cring tk" style="--i:53px;--o:61px"></div>
+    <div class="cring full" style="--i:46px;--o:48px"></div>
+    <div class="cring arc" style="--i:46px;--o:48px;--f:250deg"></div>
     <div class="face"><div class="deg" id="wx-t">--</div><div class="c" id="wx-c">--</div>
       <div class="x"><span id="wx-loc"></span> <span id="wx-fl"></span></div></div>
   </div>
