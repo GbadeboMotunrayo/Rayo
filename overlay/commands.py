@@ -333,14 +333,33 @@ def _app_name(path):
     return os.path.basename(path)
 
 
+QUESTION = re.compile(r"^(what|what's|whats|who|who's|why|how|when|where|which|is|are|can|could|should|"
+                      r"do|does|did|will|would|was|were)\b")
+NOISE = {"the", "a", "huh", "uh", "um", "hmm", "and", "okay", "yes", "yeah", "oh"}
+
+
+def _brain(q):
+    """No command matched: ask the local LLM (overlay/brain.py). Talk only, never act."""
+    if q in NOISE or len(q) < 4:
+        return plan("none", msg="didn't catch that")
+    return plan("brain", q, "thinking…")
+
+
 def resolve(text):
     t = clean(text)
     if not t:
         return plan("none", msg="didn't catch that")
     if re.search(r"\b(shut ?down|power off|restart|reboot|turn off the computer)\b", t):
         return plan("refuse", msg="power stays on the hub (safety)")
-    if re.search(r"\b(help|what can you do|commands)\b", t):
-        return plan("say", msg="try: open claude · open downloads · search for …")
+    if re.fullmatch(r"(what can you do|what do|what do you do|help|commands|what are your commands)", t) or t.startswith("help "):
+        return plan("say", msg="try: open claude · open downloads · search for … · or ask me anything")
+    # the brain: "ask …", "tell me …", "explain …", or a long question
+    m = re.match(r"^(?:ask|question|ask (?:you|the brain)|i have a question)\s*(.*)$", t)
+    if m and m.group(1):
+        return _brain(m.group(1))
+    if re.match(r"^(tell me|explain|define|describe|who|why|summari[sz]e|give me|write|suggest|translate)\b", t) \
+            or (QUESTION.match(t) and len(t.split()) > 5):
+        return _brain(t)
     if re.search(r"\bwhat( i|')?s? the time\b|\bwhat time\b|\bthe time\b", t):
         return plan("say", msg="it's " + time.strftime("%-I:%M %p").lower())
     if re.search(r"\b(what( i|')?s? the date|what day|today'?s date|the date)\b", t):
@@ -389,9 +408,12 @@ def resolve(text):
     m = re.match(r"^(open|launch|start|run|show(?: me)?|go to|bring up|pull up)\s+(.+)$", t)
     if m:
         return _open_target(m.group(2), m.group(1))
-    # bare noun ("downloads", "claude", "tech folder")
-    p = _open_target(t)
-    return p if p["kind"] != "none" else plan("none", msg=f"no command for “{t}”. say “help”")
+    # bare noun ("downloads", "claude", "tech folder"); anything else goes to the brain
+    if len(t.split()) <= 3:
+        p = _open_target(t)
+        if p["kind"] != "none":
+            return p
+    return _brain(t)
 
 
 CANCEL = re.compile(r"\b(cancel|never ?mind|nothing|forget it|stop|no)\b")
@@ -501,6 +523,9 @@ def _toggle_dnd():
 def execute(p):
     """Carry out a plan; return (message, hud_command_or_None)."""
     k, a, msg = p["kind"], p["arg"], p["msg"]
+    if k == "brain":
+        import brain
+        return brain.ask(a), None
     try:
         if k == "app":
             _popen(["gio", "launch", a])

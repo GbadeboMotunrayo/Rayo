@@ -173,6 +173,31 @@ changes. Power actions (shutdown/restart) stay on the hub, by design: a
 misheard word must never turn your machine off. The full grammar lives in
 [`overlay/commands.py`](overlay/commands.py).
 
+### The brain (optional)
+
+Anything that isn't a command goes to a small local LLM through
+[Ollama](https://ollama.com): "why is the sky blue", "tell me a joke", "who
+wrote Things Fall Apart". The answer types itself out under the reactor. It
+remembers the last few exchanges, so "and how old is he?" works.
+
+```bash
+curl -fsSL https://ollama.com/install.sh | sh
+ollama pull gemma3:1b        # ~800MB; any chat model works
+```
+
+- **Private:** it runs on your machine and talks only to `127.0.0.1`.
+- **Light:** the model loads when you say "Rayo" and unloads 3 minutes after
+  your last question. A 1-2B model uses about 1.3GB of memory while it's loaded.
+- **Talk, never act:** the brain can't run commands. Opening apps and folders
+  still goes through the fixed command list, so a model mistake can't touch
+  your machine.
+- **Pick a model:** Rayo uses `gemma3:1b` if you have it, otherwise the first
+  model Ollama has. To choose one, set `RAYO_BRAIN_MODEL`, or put
+  `{"brain": {"model": "qwen3:1.7b"}}` in `~/.config/rayo/config.json`.
+
+Small models get facts wrong sometimes, especially dates, ages and recent
+events. Treat answers as a quick guess, not a source.
+
 ## Support
 
 Rayo is free and always will be. If it made your desktop cooler, a tip funds new

@@ -2,7 +2,7 @@
    Rayo · voice visuals — the reactor is the voice interface.
    The desktop overlay streams the listener's events here:
      starting · armed · listening · level <0..1> · heard <text> ·
-     ask <question> · result <msg> · idle · error <msg> · off
+     ask <question> · thinking · say <partial answer> · answer <text> · result <msg> · idle · error <msg> · off
    window.RayoVoice.on(kind, payload) is the single entry point.
    In a plain browser (no overlay) RayoVoice.demo() plays a clearly
    labelled scripted run so the look can be previewed.
@@ -11,7 +11,7 @@
   'use strict';
   const root = document.documentElement;
   const $ = (id) => document.getElementById(id);
-  const STATES = ['rv-on', 'rv-armed', 'rv-listening', 'rv-error'];
+  const STATES = ['rv-on', 'rv-armed', 'rv-listening', 'rv-thinking', 'rv-error'];
   let capTimer = null, lastHeard = '', demo = false;
 
   const setState = (...cls) => { STATES.forEach((c) => root.classList.remove(c)); cls.forEach((c) => root.classList.add(c)); };
@@ -21,8 +21,9 @@
     root.style.setProperty('--vs', (1 + L * 0.14).toFixed(3));   // spectrum ring flares
     root.style.setProperty('--vo', (1 + L * 0.07).toFixed(3));   // core breathes
   }
-  function caption(said, res, err, hold = 3200, asking = false) {
+  function caption(said, res, err, hold = 3200, asking = false, talking = false) {
     const c = $('vcap'); if (!c) return;
+    c.classList.toggle('talk', talking);
     c.querySelector('.said').textContent = !said ? '' : asking ? said : `“${said}”`;
     c.classList.toggle('ask', asking);
     c.querySelector('.res').textContent = res || '';
@@ -41,6 +42,10 @@
                  lastHeard = ''; caption('', 'listening…', false, 0); },
     level(v)   { level(v); },
     heard(t)   { lastHeard = t || ''; },
+    thinking() { setState('rv-on', 'rv-armed', 'rv-thinking'); label('VOICE · THINKING'); level(0);
+                 caption(lastHeard, 'thinking…', false, 0); },
+    say(t)     { caption(lastHeard, t, false, 0, false, true); },               // answer streaming in
+    answer(t)  { caption(lastHeard, t, false, Math.max(5000, (t || '').split(' ').length * 420), false, true); },
     ask(q)     { setState('rv-on', 'rv-armed', 'rv-listening'); label('VOICE · ASKING');   // Rayo needs a detail
                  caption(q, 'listening…', false, 0, true); },
     result(m)  { caption(lastHeard, m, isErr(m)); },
@@ -67,7 +72,14 @@
     at(6300, 'ask', 'which browser? brave, chromium or firefox');
     [.3, .7, .5, .2].forEach((v, i) => at(8600 + i * 250, 'level', v));
     at(9700, 'level', 0); at(9800, 'heard', 'firefox'); at(9850, 'result', 'opening firefox (demo)');
-    at(10300, 'idle'); at(14000, 'off');
+    at(10300, 'idle');
+    // then a question for the brain (the local LLM)
+    at(12500, 'listening'); [.4, .8, .6, .3].forEach((v, i) => at(12800 + i * 250, 'level', v));
+    at(13900, 'level', 0); at(14000, 'heard', 'why is the sky blue'); at(14050, 'thinking');
+    const reply = 'Sunlight scatters off the air, and blue light scatters the most, so the whole sky glows blue.';
+    reply.split(' ').forEach((w, i, a) => at(15000 + i * 110, 'say', a.slice(0, i + 1).join(' ')));
+    at(15000 + reply.split(' ').length * 110, 'answer', reply);
+    at(17800, 'idle'); at(25000, 'off');
   }
 
   window.RayoVoice = {

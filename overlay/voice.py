@@ -66,6 +66,14 @@ def fail(msg):
 import commands
 
 
+def brain_warm():
+    try:
+        import brain
+        brain.warm()
+    except Exception:
+        pass
+
+
 MAX_FOLLOWUPS = 2                               # "which document?" → retry once → give up
 
 
@@ -93,6 +101,13 @@ def report(text, model=None, q=None):
         p = commands.answer(p["arg"], reply)
     if p["kind"] == "ask":
         p = commands.plan("none", msg="okay, never mind")
+    if p["kind"] == "brain":                    # no command matched: think, streaming to the HUD
+        import brain
+        emit("thinking", "")
+        msg = brain.ask(p["arg"], lambda part: emit("say", part))
+        emit("answer", msg)
+        notify(msg)
+        return
     msg, hud = commands.execute(p)
     if hud:
         emit("do", hud)                        # HUD-side actions: theme, bench
@@ -248,6 +263,7 @@ def wake_loop():
                 continue
             if rec.AcceptWaveform(data) and is_wake(rec.Result()):
                 chime(); emit("listening")
+                brain_warm()                    # load the LLM while you speak (no-op without Ollama)
                 while not q.empty():          # discard the wake phrase itself
                     try: q.get_nowait()
                     except queue.Empty: break
