@@ -34,8 +34,14 @@ STOP = {"v": False}
 
 
 # ---- output ----------------------------------------------------------------
+_emit_lock = threading.Lock()
+
+
 def emit(kind, payload=""):
-    print(f"@{kind} {payload}".rstrip(), flush=True)
+    line = f"@{kind} {' '.join(str(payload).split())}".rstrip() + "\n"   # one line, whole (threads share stdout)
+    with _emit_lock:
+        sys.stdout.write(line)
+        sys.stdout.flush()
 
 
 def notify(msg):
@@ -74,6 +80,23 @@ def brain_warm():
         pass
 
 
+_speaker = []
+
+
+def speaker():
+    """Rayo's voice (overlay/speech.py). Without Piper it stays silent and the HUD captions carry on."""
+    if not _speaker:
+        import speech
+        _speaker.append(speech.Speaker(emit))
+    return _speaker[0]
+
+
+def speak(text):
+    spk = speaker()
+    spk.say(text)
+    spk.wait()
+
+
 MAX_FOLLOWUPS = 2                               # "which document?" → retry once → give up
 
 
@@ -94,7 +117,11 @@ def report(text, model=None, q=None):
     for _ in range(MAX_FOLLOWUPS):
         if p["kind"] != "ask" or model is None or STOP["v"]:
             break
-        emit("ask", p["msg"]); chime()
+        emit("ask", p["msg"])
+        if speaker().available():
+            speak(p["msg"]); emit("ask", p["msg"])  # back to listening once the question is said
+        else:
+            chime()
         drain(q)                                # don't hear the chime / our own question
         reply = capture(model, q)
         emit("heard", reply)
@@ -103,9 +130,17 @@ def report(text, model=None, q=None):
         p = commands.plan("none", msg="okay, never mind")
     if p["kind"] == "brain":                    # no command matched: think, streaming to the HUD
         import brain
+        import speech
         emit("thinking", "")
-        msg = brain.ask(p["arg"], lambda part: emit("say", part))
+        spoken = speech.Sentences(speaker())      # speak each sentence as soon as it's complete
+
+        def partial(t):
+            emit("say", t)
+            spoken.feed(t)
+        msg = brain.ask(p["arg"], partial)
         emit("answer", msg)
+        spoken.finish(msg)
+        speaker().wait()
         notify(msg)
         return
     msg, hud = commands.execute(p)
@@ -113,6 +148,7 @@ def report(text, model=None, q=None):
         emit("do", hud)                        # HUD-side actions: theme, bench
     emit("result", msg)
     notify(f"“{text}” → {msg}" if text else msg)
+    speak(msg)
 
 
 # ---- audio -----------------------------------------------------------------
@@ -253,6 +289,8 @@ def wake_loop():
 
     with open_stream(q) as mic:               # ONE mic stream for everything
         emit("armed"); notify("Rayo is listening — say “Rayo”")
+        speak("Rayo online.")                   # also loads the voice (~4s) before you need it
+        drain(q)                                # ...and it said "Rayo": don't wake on that
         rec = wake_rec()
         while not STOP["v"]:
             try:
@@ -268,6 +306,7 @@ def wake_loop():
                     try: q.get_nowait()
                     except queue.Empty: break
                 report(capture(model, q), model, q)
+                drain(q)                          # never hear Rayo's own voice as a wake word
                 emit("idle")
                 rec = wake_rec()
     emit("off")

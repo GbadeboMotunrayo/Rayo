@@ -604,7 +604,7 @@ html.rv-on .topstrip .vstate{display:inline}
 .topstrip .vstate::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;
   background:var(--ice);box-shadow:0 0 8px var(--ice);margin-right:7px;vertical-align:1px;
   animation:blink 1.6s ease-in-out infinite}
-html.rv-listening .topstrip .vstate{color:var(--ice-bright)}
+html.rv-listening .topstrip .vstate,html.rv-speaking .topstrip .vstate{color:var(--ice-bright)}
 html.rv-error .topstrip .vstate{color:#ff9a9d}
 html.rv-error .topstrip .vstate::before{background:var(--red);box-shadow:0 0 8px var(--red)}
 
@@ -617,11 +617,11 @@ html.rv-error .topstrip .vstate::before{background:var(--red);box-shadow:0 0 8px
   opacity:0;transform:scale(var(--vs,1));
   transition:opacity .35s ease, transform .22s cubic-bezier(.2,.8,.2,1)}
 html.rv-armed .vmeter{opacity:.22}
-html.rv-listening .vmeter{opacity:.95}
+html.rv-listening .vmeter,html.rv-speaking .vmeter{opacity:.95}
 /* the core breathes with your voice (scale lives on the container, so it
    composes with the orb's own pulse instead of fighting it) */
 .orb{transform:scale(var(--vo,1));transition:transform .22s cubic-bezier(.2,.8,.2,1)}
-html.rv-listening .orb .core{box-shadow:inset 0 0 46px rgba(255,255,255,.35),
+html.rv-listening .orb .core,html.rv-speaking .orb .core{box-shadow:inset 0 0 46px rgba(255,255,255,.35),
   inset 0 0 20px rgb(var(--ice-hi-rgb) / .45), 0 0 34px rgb(var(--ice-rgb) / .75)}
 
 /* what Rayo heard, as a subtitle under the reactor */

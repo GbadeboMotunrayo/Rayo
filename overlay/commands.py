@@ -352,7 +352,7 @@ def resolve(text):
     if re.search(r"\b(shut ?down|power off|restart|reboot|turn off the computer)\b", t):
         return plan("refuse", msg="power stays on the hub (safety)")
     if re.fullmatch(r"(what can you do|what do|what do you do|help|commands|what are your commands)", t) or t.startswith("help "):
-        return plan("say", msg="try: open claude · open downloads · search for … · or ask me anything")
+        return plan("say", msg="try: open claude · open downloads · search for jollof rice · or just ask me anything")
     # the brain: "ask …", "tell me …", "explain …", or a long question
     m = re.match(r"^(?:ask|question|ask (?:you|the brain)|i have a question)\s*(.*)$", t)
     if m and m.group(1):
@@ -375,6 +375,11 @@ def resolve(text):
         return plan("hud", "bench", "bench mode")
     if re.search(r"\b(next|change|switch|another|new) (the )?themes?\b|^themes?$", t):
         return plan("hud", "theme", "switching theme")
+    # Rayo's own voice
+    if re.search(r"\b(stop talking|be quiet|shut up|silent mode|mute yourself|don'?t (talk|speak)|stop speaking)\b", t):
+        return plan("speech", False, "okay, captions only")
+    if re.fullmatch(r"(talk to me|speak (again|to me|up)|voice on|you can (talk|speak)( again)?|start talking|unmute yourself)", t):
+        return plan("speech", True, "voice on. I'm back")
     # volume & media
     if re.search(r"\b(volume up|louder|turn (it )?up|increase (the )?volume)\b", t):
         return plan("volume", "+", "volume up")
@@ -555,6 +560,9 @@ def execute(p):
             import stats
             t = stats.cpu_temp()
             msg = f"cpu at {t}°c" if t is not None else "temperature unavailable"
+        elif k == "speech":
+            import config
+            config.set("speech", "on", bool(a))
         elif k == "hud":
             return msg, a
     except Exception as e:

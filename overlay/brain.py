@@ -36,11 +36,8 @@ def _req(path, body=None, timeout=5):
 
 
 def _config_model():
-    try:
-        with open(os.path.expanduser("~/.config/rayo/config.json")) as f:
-            return json.load(f).get("brain", {}).get("model")
-    except (OSError, ValueError):
-        return None
+    import config
+    return config.get("brain", "model")
 
 
 def model():
@@ -94,7 +91,8 @@ def ask(question, on_text=None):
             "options": {"num_ctx": 2048, "num_predict": 110, "temperature": 0.6}}
     out, shown = "", 0.0
     try:
-        with _req("/api/chat", body, timeout=90) as r:
+        # timeout is per read: a queued request (Ollama serves one at a time on CPU) fails fast
+        with _req("/api/chat", body, timeout=25) as r:
             for line in r:
                 chunk = json.loads(line)
                 out += chunk.get("message", {}).get("content", "")
@@ -104,6 +102,8 @@ def ask(question, on_text=None):
                 if chunk.get("done"):
                     break
     except OSError as e:
+        if not out and isinstance(e, TimeoutError) or "timed out" in str(e):
+            return "my brain is busy with another app right now. try again in a moment"
         return f"my brain didn't answer ({e.__class__.__name__})"
     answer = _clean(out) or "I don't have an answer for that."
     _history.extend([{"role": "user", "content": question}, {"role": "assistant", "content": answer}])

@@ -129,8 +129,14 @@ Talk to Rayo, offline and private. Recognition runs on-device via Vosk
   off = back to zero.
 
 ```bash
-./voice-setup.sh    # one-time: venv + Vosk + small model, under ~/.local (no sudo)
+./voice-setup.sh    # one-time: Vosk (ears) + Piper (voice), under ~/.local (no sudo)
 ```
+
+Rayo talks back, offline, with [Piper](https://github.com/OHF-Voice/piper1-gpl)
+(default voice: British "Alan"). It answers out loud, asks its follow-up
+questions out loud, and the reactor pulses with its voice as it speaks. Say
+**"stop talking"** for captions only, and **"talk to me"** to bring the voice back.
+Pick another voice with `RAYO_VOICE=en_US-ryan-medium ./voice-setup.sh`.
 
 **Turning it on and off:** tap the reactor once to open the radial menu, then
 tap **VOICE**. Do the same to turn it off. The reactor shows you what's happening:
@@ -139,6 +145,8 @@ tap **VOICE**. Do the same to turn it off. The reactor shows you what's happenin
 |-------|--------------|
 | Armed | "VOICE ARMED" in the top strip, a faint ring around the core, VOICE glows in the menu |
 | Listening | the core pulses with your voice and a spectrum ring flares around it |
+| Thinking | "VOICE · THINKING" in gold while the brain works on an answer |
+| Speaking | the core pulses with Rayo's own voice |
 | Heard | your words as a subtitle under the reactor, with the result beneath |
 | Problem | a red message under the reactor (e.g. "run ./voice-setup.sh") |
 

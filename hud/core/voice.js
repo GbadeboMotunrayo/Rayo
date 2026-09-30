@@ -2,7 +2,7 @@
    Rayo · voice visuals — the reactor is the voice interface.
    The desktop overlay streams the listener's events here:
      starting · armed · listening · level <0..1> · heard <text> ·
-     ask <question> · thinking · say <partial answer> · answer <text> · result <msg> · idle · error <msg> · off
+     ask <question> · thinking · say <partial answer> · speaking · answer <text> · result <msg> · idle · error <msg> · off
    window.RayoVoice.on(kind, payload) is the single entry point.
    In a plain browser (no overlay) RayoVoice.demo() plays a clearly
    labelled scripted run so the look can be previewed.
@@ -11,7 +11,7 @@
   'use strict';
   const root = document.documentElement;
   const $ = (id) => document.getElementById(id);
-  const STATES = ['rv-on', 'rv-armed', 'rv-listening', 'rv-thinking', 'rv-error'];
+  const STATES = ['rv-on', 'rv-armed', 'rv-listening', 'rv-thinking', 'rv-speaking', 'rv-error'];
   let capTimer = null, lastHeard = '', demo = false;
 
   const setState = (...cls) => { STATES.forEach((c) => root.classList.remove(c)); cls.forEach((c) => root.classList.add(c)); };
@@ -44,6 +44,7 @@
     heard(t)   { lastHeard = t || ''; },
     thinking() { setState('rv-on', 'rv-armed', 'rv-thinking'); label('VOICE · THINKING'); level(0);
                  caption(lastHeard, 'thinking…', false, 0); },
+    speaking() { setState('rv-on', 'rv-armed', 'rv-speaking'); label('VOICE · SPEAKING'); },   // reactor pulses with Rayo's voice
     say(t)     { caption(lastHeard, t, false, 0, false, true); },               // answer streaming in
     answer(t)  { caption(lastHeard, t, false, Math.max(5000, (t || '').split(' ').length * 420), false, true); },
     ask(q)     { setState('rv-on', 'rv-armed', 'rv-listening'); label('VOICE · ASKING');   // Rayo needs a detail
