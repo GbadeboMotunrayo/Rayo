@@ -13,17 +13,17 @@ import os, re, json, time, threading, urllib.request
 
 OLLAMA = os.environ.get("RAYO_OLLAMA", "http://127.0.0.1:11434")
 PREFERRED = ("gemma3:1b", "gemma3:1b-it-qat", "qwen3:1.7b", "llama3.2:1b")
-KEEP_ALIVE = "3m"
+KEEP_ALIVE = "10m"             # stays loaded 10 min after the last question (reloading costs ~10-20s)
 MEMORY_TURNS = 3                 # remember the last 3 exchanges ("and how old is he?")
 MEMORY_TTL = 300                 # forget the conversation after 5 quiet minutes
 SYSTEM = (
     "You are Rayo (Radiant Assistant, Your Oracle), the voice assistant on {user}'s Linux laptop. "
-    "Your reply is shown under a HUD reactor and may be spoken aloud, so answer in one or two "
-    "short sentences, under 40 words, plain text, no markdown, no lists, no emoji. "
-    "The user's words come from offline speech recognition and may be misheard; answer what "
-    "they most likely meant. If you truly don't know, say so briefly. "
-    "You cannot open apps or change settings yourself; if asked, say which command to say "
-    "(for example: say 'open browser'). Today is {date}."
+    "Your reply is shown under a HUD reactor and spoken aloud, so answer in one or two short "
+    "sentences, under 40 words, plain text, no markdown, no lists, no emoji. "
+    "The user's words come from speech recognition and may be slightly misheard; answer what "
+    "they most likely meant. Never repeat the user's words back as your answer. "
+    "If you don't know something, or it needs live data you don't have, say so in one short sentence. "
+    "You cannot control the computer yourself. It is {time} on {date}. {live}"
 )
 
 _history, _last = [], [0.0]
@@ -57,6 +57,21 @@ def model():
     return chat[0] if chat else None
 
 
+def _live():
+    """A line of live facts from the HUD's own stats (weather, battery) so answers can use them."""
+    try:
+        with open(os.path.join(os.path.dirname(__file__), "..", "hud", "stats.json")) as f:
+            d = json.load(f)
+    except (OSError, ValueError):
+        return ""
+    bits = []
+    if d.get("wx_cond"):
+        bits.append(f"Weather outside now: {d.get('wx_temp', '').lstrip('+')}, {d['wx_cond'].lower()}.")
+    if d.get("battery") is not None:
+        bits.append(f"Laptop battery: {d['battery']}% ({d.get('batt_status', '').lower()}).")
+    return " ".join(bits)
+
+
 def warm():
     """Load the model in the background (called on the wake word), so the first
     answer doesn't wait ~10s for it to come off disk."""
@@ -84,7 +99,8 @@ def ask(question, on_text=None):
         return "my brain is offline. install ollama and pull a model, e.g. ollama pull gemma3:1b"
     if time.time() - _last[0] > MEMORY_TTL:
         _history.clear()
-    system = SYSTEM.format(user=os.environ.get("USER", "the user"), date=time.strftime("%A %d %B %Y"))
+    system = SYSTEM.format(user=os.environ.get("USER", "the user"), date=time.strftime("%A %d %B %Y"),
+                           time=time.strftime("%-I:%M %p"), live=_live())
     try:
         import memory
         known = memory.relevant(question)
@@ -99,8 +115,8 @@ def ask(question, on_text=None):
             "options": {"num_ctx": 2048, "num_predict": 110, "temperature": 0.6}}
     out, shown = "", 0.0
     try:
-        # timeout is per read: a queued request (Ollama serves one at a time on CPU) fails fast
-        with _req("/api/chat", body, timeout=25) as r:
+        # per-read timeout: covers a cold load on a busy, swapping laptop
+        with _req("/api/chat", body, timeout=60) as r:
             for line in r:
                 chunk = json.loads(line)
                 out += chunk.get("message", {}).get("content", "")
@@ -111,7 +127,7 @@ def ask(question, on_text=None):
                     break
     except OSError as e:
         if not out and isinstance(e, TimeoutError) or "timed out" in str(e):
-            return "my brain is busy with another app right now. try again in a moment"
+            return "I'm thinking too slowly right now, the laptop is short on memory. try again in a moment"
         return f"my brain didn't answer ({e.__class__.__name__})"
     answer = _clean(out) or "I don't have an answer for that."
     _history.extend([{"role": "user", "content": question}, {"role": "assistant", "content": answer}])

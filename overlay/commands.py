@@ -363,6 +363,15 @@ def resolve(text):
         return plan("forget")
     if re.fullmatch(r"(what do you (remember|know about me)|what have i told you|what('?s| is) in your memory)", t):
         return plan("recall")
+    # weather (before the brain: questions about rain are live data, not trivia)
+    if re.search(r"\b(weather|forecast|rain(ing|y)?|umbrella|sunny|cold outside|hot outside|temperature outside|outside temperature|outside)\b", t) \
+            and not re.match(r"^(tell me about|explain|define|describe|write|summari[sz]e|what (is|are) (a |an )?(rain|weather) ?(forest|cycle|pattern)s?)\b", t):
+        when = next((w for w in ("tonight", "tomorrow", "today", "this evening", "this morning", "later")
+                     if w in t), "now")
+        return plan("weather", when, "checking the weather")
+    # things Rayo can't reach yet: say so plainly instead of letting the brain guess
+    if re.match(r"^(check|read|any|do i have|send|reply|show|whats on|what's on|what is on)\b.*\b(e ?mails?|mail|inbox|messages?|whatsapp|calendar|meetings?|schedule)\b", t):
+        return plan("say", msg="I can't reach your email, messages or calendar yet. that's coming soon")
     # the brain: "ask …", "tell me …", "explain …", or a long question
     m = re.match(r"^(?:ask|question|ask (?:you|the brain)|i have a question)\s*(.*)$", t)
     if m and m.group(1):
@@ -535,6 +544,37 @@ def _toggle_dnd():
     return "focus on" if cur == "true" else "focus off"
 
 
+def _weather(when):
+    """Spoken forecast from wttr.in (the HUD's weather source)."""
+    import json, urllib.request
+    try:
+        with urllib.request.urlopen("https://wttr.in/?format=j1", timeout=10) as r:
+            d = json.load(r)
+    except Exception:
+        return "I can't reach the weather service right now"
+    now = d["current_condition"][0]
+    desc = lambda h: h["weatherDesc"][0]["value"].strip().lower()
+    if when == "now":
+        return f"it's {now['temp_C']}°C and {desc(now)}, feels like {now['FeelsLikeC']}°C"
+    today, tomorrow = d["weather"][0]["hourly"], d["weather"][1]["hourly"]
+    hour = int(time.strftime("%H")) * 100
+    if when == "tomorrow":
+        hours, label = tomorrow, "tomorrow"
+    elif when in ("tonight", "this evening"):
+        hours, label = [h for h in today if int(h["time"]) >= 1800] + tomorrow[:1], "tonight"
+    elif when == "this morning":
+        hours, label = [h for h in today if 600 <= int(h["time"]) <= 1200], "this morning"
+    else:                                      # today / later: what's left of today
+        hours, label = [h for h in today if int(h["time"]) + 300 > hour] or today[-2:], "later today"
+    rain = max(int(h["chanceofrain"]) for h in hours)
+    temps = [int(h["tempC"]) for h in hours]
+    wettest = max(hours, key=lambda h: int(h["chanceofrain"]))
+    verdict = ("yes, rain is likely" if rain >= 60 else "maybe, there's some chance of rain" if rain >= 30
+               else "rain is unlikely")
+    span = f"{min(temps)}°C" if min(temps) == max(temps) else f"{min(temps)} to {max(temps)}°C"
+    return f"{label}: {verdict}, {rain}% chance, {desc(wettest)}, {span}"
+
+
 def execute(p):
     """Carry out a plan; return (message, hud_command_or_None)."""
     k, a, msg = p["kind"], p["arg"], p["msg"]
@@ -561,6 +601,8 @@ def execute(p):
                 return "nothing is playing", None
         elif k == "dnd":
             msg = _toggle_dnd()
+        elif k == "weather":
+            msg = _weather(a)
         elif k == "battery":
             import stats
             pct, charging, status, mins = stats.battery_info()
