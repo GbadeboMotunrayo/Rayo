@@ -17,7 +17,7 @@ forwards to the HUD (the reactor visualises them):
   @armed · @listening · @level <0..1> · @heard <text> · @result <msg> ·
   @idle · @error <msg> · @off
 """
-import os, sys, json, math, shutil, subprocess, signal
+import os, sys, json, math, shutil, subprocess, signal, threading
 from array import array
 
 MODEL_DIR = os.environ.get("RAYO_VOSK_MODEL",
@@ -115,8 +115,6 @@ def report(text):
 # ---- audio -----------------------------------------------------------------
 def load():
     try:
-        import queue  # noqa: F401
-        import sounddevice  # noqa: F401
         import vosk
     except Exception:
         fail("voice not installed — run ./voice-setup.sh")
@@ -126,13 +124,56 @@ def load():
     return vosk.Model(MODEL_DIR)
 
 
+# The system's own recorders (PipeWire first, ALSA second) — no PortAudio needed.
+RECORDERS = [
+    ["pw-record", "--raw", "--rate", str(RATE), "--channels", "1", "--format", "s16", "-"],
+    ["arecord", "-q", "-f", "S16_LE", "-r", str(RATE), "-c", "1", "-t", "raw"],
+]
+
+
+class Mic:
+    """The microphone as int16 blocks on a queue."""
+    def __init__(self, q):
+        self.q, self.proc, self.sd = q, None, None
+
+    def __enter__(self):
+        for cmd in RECORDERS:
+            if shutil.which(cmd[0]):
+                self.proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+                threading.Thread(target=self._pump, daemon=True).start()
+                return self
+        try:                                   # last resort: PortAudio via sounddevice
+            import sounddevice as sd
+            self.sd = sd.RawInputStream(samplerate=RATE, blocksize=BLOCK, dtype="int16", channels=1,
+                                        callback=lambda i, f, t, s: self.q.put(bytes(i)))
+            self.sd.__enter__()
+            return self
+        except Exception:
+            fail("no microphone recorder found (need pw-record or arecord)")
+
+    def _pump(self):
+        while True:
+            b = self.proc.stdout.read(BLOCK * 2)
+            if not b:
+                break
+            self.q.put(b)
+
+    def alive(self):
+        return self.sd is not None or (self.proc is not None and self.proc.poll() is None)
+
+    def __exit__(self, *exc):
+        if self.proc:
+            self.proc.terminate()
+            try:
+                self.proc.wait(timeout=1)
+            except Exception:
+                self.proc.kill()
+        if self.sd:
+            self.sd.__exit__(*exc)
+
+
 def open_stream(q):
-    import sounddevice as sd
-    try:
-        return sd.RawInputStream(samplerate=RATE, blocksize=BLOCK, dtype="int16",
-                                 channels=1, callback=lambda i, f, t, s: q.put(bytes(i)))
-    except Exception as e:
-        fail(f"microphone unavailable ({e.__class__.__name__})")
+    return Mic(q)
 
 
 def level(data):
@@ -141,7 +182,7 @@ def level(data):
     if not a:
         return 0.0
     rms = math.sqrt(sum(s * s for s in a) / len(a))
-    return max(0.0, min(1.0, (20 * math.log10(rms + 1) - 38) / 40))
+    return max(0.0, min(1.0, (20 * math.log10(rms + 1) - 32) / 36))   # tuned for laptop mics
 
 
 def capture(model, q, seconds=6):
@@ -208,13 +249,15 @@ def wake_loop():
         rec.SetWords(True)
         return rec
 
-    with open_stream(q):                      # ONE mic stream for everything
+    with open_stream(q) as mic:               # ONE mic stream for everything
         emit("armed"); notify("Rayo is listening — say “Rayo”")
         rec = wake_rec()
         while not STOP["v"]:
             try:
                 data = q.get(timeout=0.5)
             except queue.Empty:
+                if not mic.alive():
+                    fail("microphone stopped — is a mic connected and unmuted?")
                 continue
             if rec.AcceptWaveform(data) and is_wake(rec.Result()):
                 chime(); emit("listening")

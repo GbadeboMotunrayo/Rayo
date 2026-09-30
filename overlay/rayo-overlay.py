@@ -69,6 +69,13 @@ class _QuietHandler(http.server.SimpleHTTPRequestHandler):
     def log_message(self, *a):  # silence request logging
         pass
 
+    def end_headers(self):
+        # Never let the embedded browser reuse an old copy. The server runs on a
+        # fixed port (so theme choice persists), which made WebKit's disk cache
+        # keep serving pre-update scripts across restarts.
+        self.send_header("Cache-Control", "no-store")
+        super().end_headers()
+
 
 def start_http_server():
     """Serve hud/ over loopback http so the page can fetch() stats.json + theme
@@ -147,6 +154,10 @@ class Overlay(Gtk.Window):
         self.resize(g.width, g.height)
 
         # --- the web view (with a JS→system command bridge) ---
+        # No HTTP disk cache: files come from loopback, so caching buys nothing
+        # and a stale cache hides updates. (localStorage — theme choice — is
+        # separate and still persists.)
+        WebKit2.WebContext.get_default().set_cache_model(WebKit2.CacheModel.DOCUMENT_VIEWER)
         # The HUD's hub is interactive: clicking it opens menus whose actions
         # (shutdown, sleep, launch apps…) are sent from the page to here via
         # window.webkit.messageHandlers.rayo.postMessage(...). We run them.

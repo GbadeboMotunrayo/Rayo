@@ -13,9 +13,8 @@ say(){ printf '\n\033[1;36m▸ %s\033[0m\n' "$*"; }
 say "Creating Python venv at $VENV"
 mkdir -p "$BASE"; python3 -m venv "$VENV"
 "$VENV/bin/pip" -q install --upgrade pip
-say "Installing Vosk + sounddevice (offline speech)"
-"$VENV/bin/pip" -q install vosk sounddevice || {
-  echo "pip install failed. You may need PortAudio:  sudo apt install libportaudio2"; exit 1; }
+say "Installing Vosk (offline speech; the mic is read via PipeWire's pw-record)"
+"$VENV/bin/pip" -q install vosk
 
 if [ ! -d "$MODEL" ] || [ -z "$(ls -A "$MODEL" 2>/dev/null)" ]; then
   say "Downloading the small English model (~40MB, one time)"
