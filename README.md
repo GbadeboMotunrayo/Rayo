@@ -7,6 +7,9 @@
 <p align="center"><b>Your Linux desktop, but make it a superhero.</b><br>
 A free, open-source animated HUD that runs on your wallpaper.</p>
 
+<p align="center"><em>RAYO &mdash; Radiant Assistant for Your Operations</em><br>
+<sub>(<em>rayo</em>: Spanish for &ldquo;ray of light / lightning&rdquo; &mdash; the bolt in the mark)</sub></p>
+
 <p align="center">
   <img src="assets/og-card.png" width="760" alt="Rayo - animated comic-hero HUD for Linux">
 </p>
