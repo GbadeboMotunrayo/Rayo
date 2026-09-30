@@ -62,7 +62,6 @@ ACTIONS = {
     "web":      [["firefox"], ["xdg-open", "https://duckduckgo.com"]],
     "settings": [["gnome-control-center"]],
     "displays": [["gnome-control-center", "display"]],
-    "voice":    [[os.path.join(HERE, "voice.sh")]],
 }
 
 
@@ -105,6 +104,7 @@ class Overlay(Gtk.Window):
         super().__init__(type=Gtk.WindowType.TOPLEVEL)
         self._url = url
         self._paused = False
+        self._voice_proc = None
 
         # --- transparency ---
         self.set_app_paintable(True)
@@ -221,6 +221,9 @@ class Overlay(Gtk.Window):
         if action == "dnd":
             self._toggle_dnd()
             return
+        if action == "voice":
+            self._toggle_voice()
+            return
         candidates = ACTIONS.get(action)
         if not candidates:
             return
@@ -235,6 +238,32 @@ class Overlay(Gtk.Window):
             except Exception as e:
                 print(f"[rayo] action {action} failed: {e}", file=sys.stderr)
         print(f"[rayo] action {action}: no runnable command found", file=sys.stderr)
+
+    def _toggle_voice(self):
+        """Toggle the wake-word listener (voice.sh --wake). Off by default, so
+        it only listens when you ask; killed when the overlay exits."""
+        p = getattr(self, "_voice_proc", None)
+        if p and p.poll() is None:
+            self._kill_voice()
+            return
+        try:
+            self._voice_proc = subprocess.Popen(
+                [os.path.join(HERE, "voice.sh"), "--wake"],
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+            atexit.register(self._kill_voice)
+            print("[rayo] voice wake mode ON")
+        except Exception as e:
+            print(f"[rayo] voice start failed: {e}", file=sys.stderr)
+
+    def _kill_voice(self):
+        p = getattr(self, "_voice_proc", None)
+        if p and p.poll() is None:
+            try:
+                os.killpg(os.getpgid(p.pid), signal.SIGTERM)
+            except Exception:
+                try: p.terminate()
+                except Exception: pass
+        self._voice_proc = None
 
     def _toggle_dnd(self):
         """Toggle Focus/Do-Not-Disturb (GNOME 'show-banners')."""

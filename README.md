@@ -115,20 +115,25 @@ overlay/stats.py  ── writes ──▶  hud/stats.json  ── polled 1s ─�
 
 ## Voice (optional)
 
-Talk to Rayo, offline and privately. It's **push-to-talk with zero idle cost** —
-nothing listens in the background; it wakes only when you trigger it, hears one
-command, runs it, and exits. Speech is recognised on-device via Vosk (~40MB, no
-cloud).
+Talk to Rayo, offline and private. Recognition runs on-device via Vosk
+(~40MB, no cloud). Two ways to use it:
+
+- **Push-to-talk** (zero idle cost): trigger it, say one command, it runs and
+  exits. Nothing runs in the background.
+- **Wake word**: say **"Rayo"** (or "wake up") and it takes your next command.
+  Toggle it from the hub (reactor -> **VOICE**); it's **off by default** because
+  keeping an ear open uses a small continuous CPU. On = "Rayo is listening",
+  off = back to zero.
 
 ```bash
-./voice-setup.sh    # one-time: venv + Vosk + small model, all under ~/.local (no sudo)
+./voice-setup.sh    # one-time: venv + Vosk + small model, under ~/.local (no sudo)
 ```
 
-Trigger it from the hub (click the reactor -> **VOICE**) or bind a key to
-`overlay/voice.sh`. Commands: "open browser / files / terminal / settings /
-displays", "lock", "sleep", "focus". Power actions stay on the hub, by design.
+Commands: "open browser / files / terminal / settings / displays", "lock",
+"sleep", "focus". Power actions (shutdown/restart) stay on the hub, by design —
+a misheard word must never turn your machine off.
 
-## Support
+## Support## Support
 
 Rayo is free and always will be. If it made your desktop cooler, a tip funds new
 themes and build time:

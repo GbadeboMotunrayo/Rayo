@@ -31,7 +31,8 @@ cat <<EOF
 ✓ Rayo voice is ready.
   Test it now (say e.g. "open browser"):
       $HOME/Desktop/Tech/herohud/overlay/voice.sh
-  Trigger it from the HUD: click the reactor → VOICE.
+  Wake word: click the reactor → VOICE to toggle "say Rayo" listening.
+  Or push-to-talk once:
   Or bind a key: GNOME Settings → Keyboard → Shortcuts → add
       Command:  $HOME/Desktop/Tech/herohud/overlay/voice.sh
   Commands: "open browser / files / terminal / settings / displays",
