@@ -6,3 +6,7 @@ __pycache__/
 hud/user.json
 
 concepts/*.png
+
+# never commit secrets
+*.key
+anthropic.key

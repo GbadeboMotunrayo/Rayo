@@ -111,7 +111,7 @@ def _clean(text):
     return re.sub(r"\s+", " ", text).strip()
 
 
-def ask(question, on_text=None):
+def ask(question, on_text=None, examples=None):
     """Answer a question. on_text(partial) is called as words stream in.
     Returns the full answer, or a short message saying why there isn't one."""
     m = model()
@@ -129,6 +129,8 @@ def ask(question, on_text=None):
     if known:                                   # facts from the Obsidian vault ("remember that …")
         system += ("\nThings the user told you to remember (\"I\"/\"my\" means the user). Use them when relevant:\n- "
                    + "\n- ".join(known))
+    if examples:                                # answers Claude gave to similar questions: the small model learns from them
+        system += "\nGood answers you gave before to similar questions:\n" + "\n".join(f"Q: {q}\nA: {a}" for q, a in examples)[:700]
     msgs = [{"role": "system", "content": system}]
     msgs += _history + [{"role": "user", "content": question}]
     body = {"model": m, "messages": msgs, "stream": True, "think": False, "keep_alive": KEEP_ALIVE,

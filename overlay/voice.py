@@ -158,11 +158,12 @@ def _report(text, model=None, q=None):
         p = commands.answer(p["arg"], reply)
     if p["kind"] == "ask":
         p = commands.plan("none", msg="okay, never mind")
-    if p["kind"] == "brain":                    # no command matched: think (and maybe act)
-        import brain, speech, tools
-        emit("thinking", "")
+    if p["kind"] in ("brain", "cloud"):          # no command matched: think (and maybe act)
+        import brain, speech, tools, cloud
+        force = p["kind"] == "cloud"             # "ask Claude ..." skips every shortcut
+        emit("thinking", "cloud" if cloud.decide(p["arg"], force) == "claude" else "")   # the HUD says when it's Claude
         import commands as _c
-        if brain.wants_action(p["arg"]) and not brain.tools_enabled() and not _c.QUESTION.match(p["arg"]) \
+        if not force and brain.wants_action(p["arg"]) and not brain.tools_enabled() and not _c.QUESTION.match(p["arg"]) \
                 and not re.match(r"^(tell me|explain|define|describe|why|who|write|summari[sz]e)\b", p["arg"]):
             import persona                      # an action she has no command for: say so, don't make something up
             msg = persona.flavor("none", "I don't know how to do that one yet. Try: open something, search for something, or ask me a question")
@@ -171,7 +172,7 @@ def _report(text, model=None, q=None):
             notify(msg)
             speak(msg)
             return
-        if brain.wants_action(p["arg"]) and brain.tools_enabled():   # opt-in: the brain may pick tools
+        if not force and brain.wants_action(p["arg"]) and brain.tools_enabled():   # opt-in: the brain may pick tools
             r = brain.act(p["arg"])
             if r["calls"]:
                 msg, huds = tools.run(r["calls"])
@@ -196,7 +197,9 @@ def _report(text, model=None, q=None):
             emit("say", t)
             spoken.feed(t)
         import persona
-        msg = persona.brain_quip(brain.ask(p["arg"], partial))   # the answer streams; the jab lands at the end
+        msg, src = cloud.think(p["arg"], partial, force)         # learned answer -> Claude -> small local model
+        if src != "notice":
+            msg = persona.brain_quip(msg)                        # the answer streams; the jab lands at the end
         emit("answer", msg)
         remember_exchange(text, msg)
         spoken.finish(msg)

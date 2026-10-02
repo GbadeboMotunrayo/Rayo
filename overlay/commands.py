@@ -427,6 +427,19 @@ def resolve(text):
         return plan("say", msg="I don't delete things. That one's for your own hands")
     if re.match(r"^(send|text|whatsapp|email|message|dm|reply to|call|phone)\b", t):
         return plan("say", msg="I can't send messages or make calls yet. that's coming soon")
+    # the cloud brain (overlay/cloud.py)
+    m = re.match(r"^(?:(?:(?:hey|ok|okay) )?(?:ask|tell) (?:claude|the cloud|the big brain|the smart brain))[,:]?\s+(.+)$", t) or re.match(
+        r"^claude[,:]?\s+((?:tell|explain|what|why|how|who|when|where|can|could|write|summari[sz]e|give|help|suggest|compare|translate|define|describe|is|are|should)\b.+)$", t)   # "hey claude, ..." (clean() drops the hey)
+    if m:
+        return plan("cloud", m.group(1), "")
+    if re.fullmatch(r"(?:claude usage|cloud usage|how much (?:have you spent|has claude cost me|is claude costing me|did claude cost)|how much (?:am i|have i been) spending on claude)", t):
+        return plan("cloudusage")
+    if re.fullmatch(r"(?:always use claude|only use claude)", t):
+        return plan("cloudmode", "always", "okay, I'll ask Claude whenever I can")
+    if re.fullmatch(r"(?:use claude|turn on claude|enable claude|claude on|go online)", t):
+        return plan("cloudmode", "auto", "okay, I'll use Claude for the harder questions")
+    if re.fullmatch(r"(?:stop using claude|turn off claude|disable claude|claude off|stay offline|go offline|offline mode|local only|use the local brain|use your own brain)", t):
+        return plan("cloudmode", "off", "okay, staying offline. just my small brain from now on")
     # awareness (overlay/awareness.py)
     if re.search(r"\b(status|system) report\b|^(how('?s| is) (the )?(system|laptop|computer|pc)( doing)?|system status|status)$", t):
         return plan("status")
@@ -721,6 +734,12 @@ def execute(p):
         elif k == "power":
             if not _first_runnable(POWER[a]):
                 return "I couldn't do that on this system", None
+        elif k == "cloudmode":
+            import config
+            config.set("cloud", "mode", a)
+        elif k == "cloudusage":
+            import cloud
+            msg = cloud.usage_text()
         elif k == "snooze":
             import config
             config.set("awareness", "snooze_until", time.time() + 3600)

@@ -16,8 +16,8 @@ fetch(){ if command -v curl >/dev/null; then curl -fL "$1" -o "$2"; else wget -O
 say "Creating Python venv at $VENV"
 mkdir -p "$BASE"; [ -x "$VENV/bin/python" ] || python3 -m venv "$VENV"
 "$VENV/bin/pip" -q install --upgrade pip
-say "Installing Vosk (wake word), Whisper (hearing commands) and Piper (voice)"
-"$VENV/bin/pip" -q install vosk faster-whisper piper-tts
+say "Installing Vosk (wake word), Whisper (hearing commands), Piper (voice) and the Anthropic SDK (optional Claude brain)"
+"$VENV/bin/pip" -q install vosk faster-whisper piper-tts anthropic
 
 if [ ! -d "$MODEL" ] || [ -z "$(ls -A "$MODEL" 2>/dev/null)" ]; then
   say "Downloading the small English speech model (~40MB, one time)"
