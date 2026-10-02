@@ -11,7 +11,7 @@ logins in other apps), and a key keeps Rayo's spending separate from anything el
 
 Privacy: only your question and the last couple of exchanges leave the laptop. Never your vault, memories,
 battery or files. Questions that need something you told her stay local, unless {"cloud": {"share_memory": true}}.
-The HUD says ASKING GROQ / ASKING CLAUDE whenever it happens. Groq's docs say it doesn't retain requests by
+The HUD just says THINKING; the daily note in your vault records which brain answered. Groq's docs say it doesn't retain requests by
 default (troubleshooting logs up to 30 days, switchable off in its Console); free-tier terms at Google are why
 Gemini was not the pick.
 

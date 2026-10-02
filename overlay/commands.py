@@ -447,6 +447,10 @@ def resolve(text):
         who = "anthropic" if m.group(1) == "claude" else "groq"
         return plan("cloudprovider", who, "okay, Claude is my everyday cloud brain now. that costs a little" if who == "anthropic"
                     else "okay, Groq is my everyday cloud brain")
+    # Claude chats -> Obsidian (overlay/chats.py)
+    if re.fullmatch(r"(?:sync|export|save|update|refresh) (?:my |our |the )?(?:chats?|conversations?)(?: to (?:obsidian|the vault|my vault))?|"
+                    r"(?:save|export|sync) (?:our|this) (?:chat|conversation)", t):
+        return plan("chatsync", msg="syncing your chats to the vault")
     # awareness (overlay/awareness.py)
     if re.search(r"\b(status|system) report\b|^(how('?s| is) (the )?(system|laptop|computer|pc)( doing)?|system status|status)$", t):
         return plan("status")
@@ -744,6 +748,10 @@ def execute(p):
         elif k == "cloudmode":
             import config
             config.set("cloud", "mode", a)
+        elif k == "chatsync":
+            import chats
+            w, sk, total = chats.export_all()
+            msg = f"done. {total} conversations are in your vault, {w} updated" if total else "I couldn't find any chats to export"
         elif k == "cloudprovider":
             import config
             config.set("cloud", "provider", a)

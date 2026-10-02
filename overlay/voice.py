@@ -102,11 +102,11 @@ def speak(text):
     spk.wait()
 
 
-def remember_exchange(heard, reply):
+def remember_exchange(heard, reply, via=None):
     """Today's note in the Obsidian vault (overlay/memory.py); never breaks the voice loop."""
     try:
         import memory
-        memory.log(heard, reply)
+        memory.log(heard, reply, via)
     except Exception:
         pass
 
@@ -203,7 +203,7 @@ def _report(text, model=None, q=None):
         if src != "notice":
             msg = persona.brain_quip(msg)                        # the answer streams; the jab lands at the end
         emit("answer", msg)
-        remember_exchange(text, msg)
+        remember_exchange(text, msg, {"groq": "via Groq", "anthropic": "via Claude", "learned": "from memory"}.get(src))
         spoken.finish(msg)
         speaker().wait()
         notify(msg)

@@ -269,8 +269,8 @@ can ask a cloud model, using **your own API key**. Two providers:
 
 **How a question is answered:** learned answers first (instant, free, offline),
 then the cloud for substantial questions, then the small local model if you're
-offline, rate-limited or over budget. The HUD says **ASKING GROQ** or **ASKING
-CLAUDE** whenever a question leaves the laptop.
+offline, rate-limited or over budget. The HUD just says **THINKING**; your daily note in the vault records which brain answered
+("via Groq", "via Claude", "from memory"), and "cloud usage" shows the counts.
 
 **Privacy:** only your question and the last couple of exchanges are sent. Never
 your vault, memories, files or battery. A question that needs something you told
@@ -299,6 +299,21 @@ follow-ups are never saved. Edit or delete any entry in Obsidian.
 | "stay offline" | local brain only |
 
 Settings: `{"cloud": {"mode": "auto", "provider": "groq", "models": {"groq": "openai/gpt-oss-20b"}, "groq_paid": false, "monthly_cap_usd": 3, "daily_limit": 150}}`.
+
+### Your chats with Claude, in Obsidian
+
+Claude Code keeps each chat as a huge `.jsonl` file Obsidian can't read. Rayo turns
+them into notes in `<vault>/Conversations/` (one note per chat, plus an `Index`
+note), keeping only what you and Claude said. **Secrets are redacted** (API keys,
+tokens, private keys, passwords), because these chats often contain things you pasted.
+
+```bash
+python3 overlay/chats.py            # or say: "Rayo, sync my chats"
+```
+
+It is safe to run repeatedly: unchanged chats are skipped and a chat that grew is updated
+in place. It only reads your Claude data and only writes inside `Conversations/`.
+Rayo's own voice conversations are in `Daily/`, with a note of which brain answered.
 
 ### Soul: she has a character, a mood and a history with you
 

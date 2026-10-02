@@ -130,7 +130,7 @@ def relevant(question, budget=900):
     return out
 
 
-def log(heard, reply):
+def log(heard, reply, via=None):
     """Append one exchange to today's daily note."""
     if not config.get("memory", "log", True) or not heard:
         return
@@ -140,7 +140,7 @@ def log(heard, reply):
     with open(path, "a") as f:
         if new:
             f.write(f"---\ntags: [rayo, daily]\n---\n# {time.strftime('%A %d %B %Y')}\n\n")
-        f.write(f"- {time.strftime('%H:%M')} **you:** {heard}\n  **rayo:** {reply}\n")
+        f.write(f"- {time.strftime('%H:%M')} **you:** {heard}\n  **rayo{f' ({via})' if via else ''}:** {reply}\n")
 
 
 def open_uri():
