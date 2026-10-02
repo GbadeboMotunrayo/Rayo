@@ -354,6 +354,10 @@ themes and build time:
 
 Starring the repo, filing issues, and sending theme PRs help just as much.
 
+## Security
+
+Rayo's server only listens on this PC, runs a strict content-security policy, asks before power actions, and keeps your API keys private. Run `./security/security-check.sh` to audit your machine, and see [SECURITY.md](SECURITY.md) for the details and what Rayo can't protect.
+
 ## Credits
 
 Rayo's soul was designed after studying open-source assistants (ideas only, no code

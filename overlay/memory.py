@@ -49,7 +49,7 @@ def _path(*parts):
 def ensure():
     """Create the vault skeleton if it's missing (never overwrites your notes)."""
     for d in ("Memory", "Daily", ".obsidian"):
-        os.makedirs(_path(d), exist_ok=True)
+        os.makedirs(_path(d), mode=0o700, exist_ok=True)       # your notes and conversation logs are private to you
     for rel, body in (("Home.md", HOME_NOTE), ("Memory/Facts.md", FACTS_HEAD),
                       (".obsidian/daily-notes.json", '{"folder": "Daily", "format": "YYYY-MM-DD"}\n')):
         if not os.path.exists(_path(rel)):

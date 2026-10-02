@@ -19,22 +19,29 @@ def get(section, key, default=None):
     return load().get(section, {}).get(key, default)
 
 
+def _write(cfg):
+    """Settings and usage stats are private to you: folder 700, file 600."""
+    d = os.path.dirname(PATH)
+    os.makedirs(d, mode=0o700, exist_ok=True)
+    try:
+        os.chmod(d, 0o700)
+    except OSError:
+        pass
+    tmp = PATH + ".tmp"
+    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w") as f:
+        json.dump(cfg, f, indent=2)
+    os.replace(tmp, PATH)
+
+
 def set(section, key, value):
     cfg = load()
     cfg.setdefault(section, {})[key] = value
-    os.makedirs(os.path.dirname(PATH), exist_ok=True)
-    tmp = PATH + ".tmp"
-    with open(tmp, "w") as f:
-        json.dump(cfg, f, indent=2)
-    os.replace(tmp, PATH)
+    _write(cfg)
 
 
 def update(section, values):
     """Set several keys of one section in a single write."""
     cfg = load()
     cfg.setdefault(section, {}).update(values)
-    os.makedirs(os.path.dirname(PATH), exist_ok=True)
-    tmp = PATH + ".tmp"
-    with open(tmp, "w") as f:
-        json.dump(cfg, f, indent=2)
-    os.replace(tmp, PATH)
+    _write(cfg)

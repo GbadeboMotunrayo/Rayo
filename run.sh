@@ -12,4 +12,4 @@ echo "▸ stats bridge running (pid $!)"
 echo "▸ serving HUD at http://localhost:$PORT"
 echo "  open that in your browser — it shows YOUR live system."
 cd "$DIR/hud"
-exec python3 -m http.server "$PORT"
+exec python3 -m http.server --bind 127.0.0.1 "$PORT"   # loopback only: the default would listen on every interface

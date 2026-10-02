@@ -406,6 +406,8 @@ def resolve(text):
     if fu:
         return plan("soul", None, fu[1]) if fu[0] == "repeat" else plan("weather", fu[1], "checking the weather")
     act = power_action(t)
+    if act and not __import__("config").get("security", "voice_power", True):
+        return plan("say", msg="voice power commands are switched off. Use the hub instead")
     if act:                                   # never acts on the first ask: she always checks first
         import persona
         return plan("ask", {"expect": "confirm", "action": act}, persona.confirm_question(act))

@@ -66,14 +66,62 @@ ACTIONS = {
 
 
 class _QuietHandler(http.server.SimpleHTTPRequestHandler):
+    """Serves hud/ to the overlay only. Hardened because the page can call the hub's power actions:
+      - Host header must be 127.0.0.1:<port> or localhost:<port>  (blocks DNS-rebinding from web pages)
+      - GET/HEAD only; no directory listings; no dotfiles; nothing outside hud/ (symlinks included)
+      - security headers, including a CSP that forbids every script except our own files"""
+    allowed_hosts = set()                     # filled in once the port is known
+    CSP = ("default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; "
+           "font-src 'self' data:; connect-src 'self'; media-src 'none'; object-src 'none'; frame-src 'none'; "
+           "base-uri 'none'; form-action 'none'; frame-ancestors 'none'")
+
     def log_message(self, *a):  # silence request logging
         pass
+
+    def _allowed(self):
+        host = (self.headers.get("Host") or "").strip().lower()
+        if host not in self.allowed_hosts:
+            self.send_error(421, "Misdirected Request")
+            return False
+        return True
+
+    def do_GET(self):
+        if self._allowed():
+            super().do_GET()
+
+    def do_HEAD(self):
+        if self._allowed():
+            super().do_HEAD()
+
+    def _refuse(self):
+        self.send_error(405, "Method Not Allowed")
+
+    do_POST = do_PUT = do_DELETE = do_PATCH = do_OPTIONS = _refuse
+
+    def list_directory(self, path):          # never expose a file listing
+        self.send_error(404, "Not Found")
+        return None
+
+    def translate_path(self, path):
+        real = os.path.realpath(super().translate_path(path))
+        root = os.path.realpath(HUD_DIR)
+        parts = os.path.relpath(real, root).split(os.sep)
+        if real != root and (not real.startswith(root + os.sep) or any(p.startswith(".") for p in parts)):
+            return os.path.join(root, "__forbidden__")          # resolves to a 404
+        return real
 
     def end_headers(self):
         # Never let the embedded browser reuse an old copy. The server runs on a
         # fixed port (so theme choice persists), which made WebKit's disk cache
         # keep serving pre-update scripts across restarts.
         self.send_header("Cache-Control", "no-store")
+        self.send_header("Content-Security-Policy", self.CSP)
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("X-Frame-Options", "DENY")
+        self.send_header("Referrer-Policy", "no-referrer")
+        self.send_header("Cross-Origin-Resource-Policy", "same-origin")
+        self.send_header("Cross-Origin-Opener-Policy", "same-origin")
+        self.send_header("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=(), usb=()")
         super().end_headers()
 
 
@@ -90,8 +138,10 @@ def start_http_server():
             break
         except OSError:
             continue
+    port = srv.server_address[1]
+    _QuietHandler.allowed_hosts = {f"127.0.0.1:{port}", f"localhost:{port}"}
     threading.Thread(target=srv.serve_forever, daemon=True).start()
-    return srv, srv.server_address[1]
+    return srv, port
 
 
 def start_stats_bridge():
@@ -168,10 +218,16 @@ class Overlay(Gtk.Window):
         s = self.web.get_settings()
         s.set_enable_write_console_messages_to_stdout(False)
         s.set_property("enable-developer-extras", False)
-        # allow file:// pages to fetch sibling files (stats.json, theme.json)
-        s.set_property("allow-file-access-from-file-urls", True)
-        s.set_property("allow-universal-access-from-file-urls", True)
+        # The HUD is served over http://127.0.0.1, so file:// relaxations are not needed: keep them off.
+        s.set_property("allow-file-access-from-file-urls", False)
+        s.set_property("allow-universal-access-from-file-urls", False)
         s.set_property("enable-page-cache", False)
+        s.set_property("javascript-can-open-windows-automatically", False)
+        # Lock the window to our own origin: the page can call power actions, so it must never be steered elsewhere.
+        self._origin = self._url.rsplit("/", 1)[0]
+        self.web.connect("decide-policy", self._on_policy)
+        self.web.connect("create", lambda *a: None)                          # no pop-up windows
+        self.web.connect("permission-request", lambda w, req: (req.deny(), True)[1])   # no mic/camera/location for the page
         # transparent webview background so the desktop shows through
         self.web.set_background_color(Gdk.RGBA(0, 0, 0, 0))
         self.add(self.web)
@@ -219,9 +275,21 @@ class Overlay(Gtk.Window):
         except Exception:
             pass
 
+    def _on_policy(self, web, decision, dtype):
+        """Only our own origin may be loaded; links, redirects and new windows elsewhere are refused."""
+        if dtype in (WebKit2.PolicyDecisionType.NAVIGATION_ACTION, WebKit2.PolicyDecisionType.NEW_WINDOW_ACTION):
+            uri = decision.get_navigation_action().get_request().get_uri() or ""
+            if not (uri == "about:blank" or uri.startswith(self._origin + "/")):
+                print(f"[rayo] blocked navigation to {uri[:80]}", file=sys.stderr)
+                decision.ignore()
+                return True
+        return False
+
     def _on_hud_message(self, _ucm, js_result):
         """Receive {action: ...} from the HUD and run the matching whitelisted
         command. Anything not in ACTIONS (or the DND toggle) is ignored."""
+        if not (self.web.get_uri() or "").startswith(self._origin + "/"):    # only our own page may drive the hub
+            return
         try:
             val = js_result.get_js_value()
             data = _json.loads(val.to_string())
