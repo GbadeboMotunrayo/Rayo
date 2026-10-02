@@ -161,7 +161,9 @@ def _report(text, model=None, q=None):
     if p["kind"] in ("brain", "cloud"):          # no command matched: think (and maybe act)
         import brain, speech, tools, cloud
         force = p["kind"] == "cloud"             # "ask Claude ..." skips every shortcut
-        emit("thinking", "cloud" if cloud.decide(p["arg"], force) == "claude" else "")   # the HUD says when it's Claude
+        provider = "anthropic" if force and p["msg"] == "claude" else None
+        dest = cloud.decide(p["arg"], force, provider)
+        emit("thinking", "cloud " + {"anthropic": "claude"}.get(dest.split(":")[1], dest.split(":")[1]) if dest.startswith("cloud:") else "")   # the HUD says who it's asking
         import commands as _c
         if not force and brain.wants_action(p["arg"]) and not brain.tools_enabled() and not _c.QUESTION.match(p["arg"]) \
                 and not re.match(r"^(tell me|explain|define|describe|why|who|write|summari[sz]e)\b", p["arg"]):
@@ -197,7 +199,7 @@ def _report(text, model=None, q=None):
             emit("say", t)
             spoken.feed(t)
         import persona
-        msg, src = cloud.think(p["arg"], partial, force)         # learned answer -> Claude -> small local model
+        msg, src = cloud.think(p["arg"], partial, force, provider)   # learned answer -> cloud -> small local model
         if src != "notice":
             msg = persona.brain_quip(msg)                        # the answer streams; the jab lands at the end
         emit("answer", msg)

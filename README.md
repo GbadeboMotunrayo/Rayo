@@ -252,45 +252,53 @@ Say **"status report"** any time for battery, temperature, memory, the biggest a
 and the weather in one breath. **"stop alerts"** / **"alerts on"** switch them.
 Settings: `{"awareness": {"on": true, "quiet": ["23:00", "07:00"]}}`.
 
-### The cloud brain (optional): Claude Haiku, with your own key
+### The cloud brain (optional): Groq every day, Claude on request
 
 The small local model is private but not very smart. For harder questions Rayo
-can ask **Claude Haiku** through the Anthropic API, using **your own API key**
-(not your Claude subscription: Anthropic's rules reserve subscription logins for
-its own apps, and a key keeps Rayo's spending separate from your coding limits).
+can ask a cloud model, using **your own API key**. Two providers:
+
+| Provider | Role | Cost |
+|----------|------|------|
+| **Groq** (`openai/gpt-oss-20b`) | everyday brain: very fast, free plan, no card | free (about 1,000 requests and 200K tokens a day); paid is $0.075 / $0.30 per million tokens |
+| **Claude Haiku 4.5** | "ask Claude ...": the strongest, on request | about $1 / $5 per million tokens |
 
 ```bash
-./set-claude-key.sh     # hidden prompt; saves the key to ~/.config/rayo/anthropic.key (chmod 600)
+./set-key.sh groq        # free key at https://console.groq.com/keys (hidden prompt, saved chmod 600)
+./set-key.sh claude      # optional, https://console.anthropic.com (set a spend limit there)
 ```
 
-Create a key at [console.anthropic.com](https://console.anthropic.com) and set a
-monthly spend limit there. Rayo also has her own cap (default 3 dollars a month,
-150 questions a day).
-
 **How a question is answered:** learned answers first (instant, free, offline),
-then Claude for substantial questions, then the small local model if you're
-offline, rate-limited or over budget. The HUD says **ASKING CLAUDE** whenever a
-question leaves the laptop.
+then the cloud for substantial questions, then the small local model if you're
+offline, rate-limited or over budget. The HUD says **ASKING GROQ** or **ASKING
+CLAUDE** whenever a question leaves the laptop.
 
 **Privacy:** only your question and the last couple of exchanges are sent. Never
 your vault, memories, files or battery. A question that needs something you told
 her ("what's my sister's name?") stays local, unless you set
-`{"cloud": {"share_memory": true}}`.
+`{"cloud": {"share_memory": true}}`. Groq's docs say it does not retain requests by
+default (troubleshooting logs for up to 30 days, which you can switch off in its
+Console), with no difference between free and paid plans. Read the provider's terms
+yourself before sending anything sensitive.
 
-**The small model learns.** Every answer Claude gives is saved to `Learned.md` in
-your vault. Ask again (or reword it) and she answers from there, offline. When she
-falls back to the local model, the closest saved answers go into its prompt as
-examples. Time-sensitive questions (news, weather, prices) and "and how old is he?"
-style follow-ups are never saved. Edit or delete any entry in Obsidian.
+**Budget:** Rayo has her own monthly cap (3 dollars, counted across providers) and
+a daily limit (150 questions) on top of anything you set at the provider.
+
+**The small model learns.** Every cloud answer is saved to `Learned.md` in your
+vault. Ask again (or reword it) and she answers from there, offline. When she falls
+back to the local model, the closest saved answers go into its prompt as examples.
+Time-sensitive questions (news, weather, prices) and "and how old is he?" style
+follow-ups are never saved. Edit or delete any entry in Obsidian.
 
 | Say | Rayo does |
 |-----|-----------|
-| "ask Claude why the sky is blue" / "hey Claude, explain tides" | forces a Claude answer |
-| "how much has Claude cost me" | this month's questions and cost |
-| "use Claude" / "always use Claude" | auto (default) / ask Claude whenever possible |
+| "ask Claude why the sky is blue" / "claude, explain tides" | forces a Claude answer |
+| "ask Groq ..." / "ask the cloud ..." | forces your everyday cloud brain |
+| "how much has Groq cost me" / "cloud usage" | this month's questions and cost |
+| "use Groq" / "use Claude" | choose the everyday brain |
+| "use the cloud" / "always use the cloud" | auto (default) / ask whenever possible |
 | "stay offline" | local brain only |
 
-Settings: `{"cloud": {"mode": "auto", "model": "claude-haiku-4-5", "monthly_cap_usd": 3, "daily_limit": 150}}`.
+Settings: `{"cloud": {"mode": "auto", "provider": "groq", "models": {"groq": "openai/gpt-oss-20b"}, "groq_paid": false, "monthly_cap_usd": 3, "daily_limit": 150}}`.
 
 ### Soul: she has a character, a mood and a history with you
 

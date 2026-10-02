@@ -2,7 +2,7 @@
    Rayo · voice visuals — the reactor is the voice interface.
    The desktop overlay streams the listener's events here:
      starting · armed · listening · level <0..1> · heard <text> ·
-     ask <question> · thinking [cloud] · say <partial answer> · speaking · alert <message> · answer <text> · result <msg> · idle · error <msg> · off
+     ask <question> · thinking [cloud <groq|anthropic>] · say <partial answer> · speaking · alert <message> · answer <text> · result <msg> · idle · error <msg> · off
    window.RayoVoice.on(kind, payload) is the single entry point.
    In a plain browser (no overlay) RayoVoice.demo() plays a clearly
    labelled scripted run so the look can be previewed.
@@ -42,13 +42,10 @@
                  lastHeard = ''; caption('', 'listening…', false, 0); },
     level(v)   { level(v); },
     heard(t)   { lastHeard = t || ''; },
-    thinking(src) { const cloud = src === 'cloud';                           // payload 'cloud' = the question is going to Claude
-                 setState('rv-on', 'rv-armed', 'rv-thinking'); label(cloud ? 'VOICE · ASKING CLAUDE' : 'VOICE · THINKING'); level(0);
-                 caption(lastHeard, cloud ? 'asking claude…' : 'thinking…', false, 0); },
-    alert(m)   { const c = $('vcap'); if (!c) return;                              // Rayo speaking up first
-                 caption('', m, false, Math.max(7000, (m || '').split(' ').length * 450), false, true);
-                 c.classList.add('alert'); setTimeout(() => c.classList.remove('alert'), 600 + Math.max(7000, (m || '').split(' ').length * 450)); },
-    speaking() { setState('rv-on', 'rv-armed', 'rv-speaking'); label('VOICE · SPEAKING'); },   // reactor pulses with Rayo's voice
+    thinking(src) { const [kind, who] = (src || '').split(' ');                 // payload 'cloud groq' = the question is leaving the laptop
+                 const cloud = kind === 'cloud', name = (who || 'cloud').toUpperCase();
+                 setState('rv-on', 'rv-armed', 'rv-thinking'); label(cloud ? 'VOICE · ASKING ' + name : 'VOICE · THINKING'); level(0);
+                 caption(lastHeard, cloud ? 'asking ' + name.toLowerCase() + '…' : 'thinking…', false, 0); },
     say(t)     { caption(lastHeard, t, false, 0, false, true); },               // answer streaming in
     answer(t)  { caption(lastHeard, t, false, Math.max(5000, (t || '').split(' ').length * 420), false, true); },
     ask(q)     { setState('rv-on', 'rv-armed', 'rv-listening'); label('VOICE · ASKING');   // Rayo needs a detail
