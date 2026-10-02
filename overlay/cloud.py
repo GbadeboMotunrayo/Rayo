@@ -157,8 +157,10 @@ def why_not(provider=None):
     if not api_key(provider):
         name = "claude" if provider == "anthropic" else provider
         return f"I don't have a {p['label']} key yet. Run set-key {name} in the Rayo folder to add one."
-    if over_budget(provider):
+    if total_cost() >= float(config.get("cloud", "monthly_cap_usd", 3.0)):
         return "I've reached this month's cloud spending limit, so I'm sticking to my small brain."
+    if over_budget(provider):
+        return "I've used up today's cloud questions, so I'm sticking to my small brain until tomorrow."
     try:
         __import__("groq" if provider == "groq" else "anthropic")
     except Exception:
