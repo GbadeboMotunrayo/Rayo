@@ -9,6 +9,7 @@ apart means every phrase can be tested without a microphone.
 What Rayo understands (wake word first, e.g. "Rayo, open claude"):
   open <any installed app>        open claude · open obs · launch calculator
   open <place>                    open documents · open downloads · open desktop
+  open office                     your staff dashboards (config "office": ssh tunnel + urls)
   open <folder name>              open tech · open the carpadi folder
   open <folder> and <folder>      open downloads and tech
   open document/file <name>       open document resume
@@ -254,6 +255,8 @@ def _open_target(t, verb="open"):
         return plan("none", msg="open what?")
     if re.fullmatch(r"(?:(?:the|my|your|rayo'?s?) )?(?:obsidian )?(?:vault|memory|notes)", t):
         return plan("vault", msg="opening memory")
+    if re.fullmatch(r"(?:(?:the|my|our) )?(?:office|headquarters|hq|staff dashboard)", t):
+        return plan("office", msg="opening the office")
     # missing detail -> ask a follow-up question
     if t in ("document", "file", "document file"):
         return plan("ask", {"expect": "document"}, "which document?")
@@ -370,7 +373,7 @@ def compound(t):
 
 
 MULTI_OK = {"app", "open", "open_many", "url", "volume", "media", "weather", "battery", "temp", "status",
-            "say", "remember", "recall", "hud", "vault", "speech", "alerts"}
+            "say", "remember", "recall", "hud", "vault", "office", "speech", "alerts"}
 
 
 def _steps(t):
@@ -611,6 +614,30 @@ def _first_runnable(candidates):
     return False
 
 
+def _open_office():
+    """'open office': bring up the ssh tunnel (if its port is closed), then open each url.
+    ~/.config/rayo/config.json: {"office": {"tunnel": "<ssh host>", "port": 9119, "urls": [...]}}"""
+    import socket, config
+    office = config.load().get("office") or {}
+    if not office.get("urls"):
+        return "no office set up yet. Add an office section to Rayo's config"
+    tunnel, port = office.get("tunnel"), int(office.get("port") or 0)
+    if tunnel and port:
+        try:
+            socket.create_connection(("127.0.0.1", port), timeout=1).close()
+        except OSError:
+            try:
+                r = subprocess.run(["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=15", "-N", "-f", tunnel],
+                                   capture_output=True, timeout=30)
+            except (OSError, subprocess.TimeoutExpired):
+                return "I couldn't reach the office server"
+            if r.returncode:
+                return "I couldn't reach the office server"
+    for url in office["urls"]:
+        _open_path(os.path.expanduser(url)) if url.startswith(("/", "~")) else _popen(["xdg-open", url])
+    return None
+
+
 def _open_path(path):
     if shutil.which("nautilus") and os.path.isdir(path):
         _popen(["nautilus", "--new-window", path])
@@ -742,6 +769,8 @@ def execute(p):
             handler = subprocess.run(["xdg-mime", "query", "default", "x-scheme-handler/obsidian"],
                                      capture_output=True, text=True).stdout.strip()
             _popen(["xdg-open", memory.open_uri()]) if handler else _open_path(memory.vault())
+        elif k == "office":
+            msg = _open_office() or msg
         elif k == "power":
             if not _first_runnable(POWER[a]):
                 return "I couldn't do that on this system", None
