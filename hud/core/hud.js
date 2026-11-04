@@ -207,7 +207,17 @@
   };
 
   // ---- render --------------------------------------------------------------
-  function paintBar(el, v) { el.style.width = clamp(v, 0, 100).toFixed(1) + '%'; }
+  // fills scale instead of resizing, so a new value each second costs no layout
+  // (docs/MOTION.md §4); a .bar also gets a .tip layer that carries the glowing dot
+  function paintBar(el, v) {
+    const p = clamp(v, 0, 100);
+    el.style.transform = `scaleX(${(p / 100).toFixed(4)})`;
+    const bar = el.parentElement;
+    if (!bar || !bar.classList.contains('bar')) return;
+    let tip = bar.querySelector(':scope > .tip');
+    if (!tip) { tip = document.createElement('span'); tip.className = 'tip'; bar.appendChild(tip); }
+    tip.style.transform = `translateX(${(p - 100).toFixed(2)}%)`;
+  }
 
   function setGauge(gid, nid, v) {
     const g = $(gid); if (g) g.style.setProperty('--p', clamp(v, 0, 100).toFixed(1));

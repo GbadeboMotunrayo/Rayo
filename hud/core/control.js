@@ -58,15 +58,41 @@
     el.dataset.act = it.act;
     el.style.setProperty('--x', (Math.cos(a) * RADIUS).toFixed(1) + 'px');
     el.style.setProperty('--y', (Math.sin(a) * RADIUS).toFixed(1) + 'px');
-    el.style.transitionDelay = (i * 14) + 'ms';
+    el.style.setProperty('--i', i);         // stagger on the way in only (CSS)
     el.textContent = it.label;
     el.addEventListener('click', (e) => { e.stopPropagation(); doAction(it.act); });
     menu.appendChild(el);
   });
 
+  // ---- rubber-band pull: an item leans towards the pointer, but less the
+  // further you go — iOS's offset = (1 − 1/(c·x/d + 1))·d (docs/MOTION.md §3).
+  // It follows 1:1 while you move (.mag), and springs home when you leave.
+  const BAND_C = 0.55, BAND_D = 10;
+  const band = (x) => Math.sign(x) * (1 - 1 / (BAND_C * Math.abs(x) / BAND_D + 1)) * BAND_D;
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
+  menu.addEventListener('pointermove', (e) => {
+    const el = e.target.closest('.hm-item');
+    if (!el || reduced.matches || !menu.classList.contains('open')) return;
+    // measure from the item's resting centre (take its current pull back out),
+    // or the pull would chase itself
+    const r = el.getBoundingClientRect(), mx = el._mx || 0, my = el._my || 0;
+    el._mx = band(e.clientX - (r.left + r.width / 2 - mx));
+    el._my = band(e.clientY - (r.top + r.height / 2 - my));
+    el.classList.add('mag');
+    el.style.translate = `${el._mx.toFixed(2)}px ${el._my.toFixed(2)}px`;
+  });
+  const release = (el) => { el.classList.remove('mag'); el.style.translate = ''; el._mx = el._my = 0; };
+  menu.addEventListener('pointerout', (e) => {
+    const el = e.target.closest('.hm-item');
+    if (el && !el.contains(e.relatedTarget)) release(el);
+  });
+
   // ---- open/close helpers --------------------------------------------------
   const openMenu   = () => { menu.classList.add('open');  menu.setAttribute('aria-hidden', 'false'); };
-  const closeMenu  = () => { menu.classList.remove('open'); menu.setAttribute('aria-hidden', 'true'); };
+  const closeMenu  = () => {
+    menu.classList.remove('open'); menu.setAttribute('aria-hidden', 'true');
+    menu.querySelectorAll('.hm-item.mag').forEach(release);   // no leftover pull next time
+  };
   const openPower  = () => { bar.classList.add('open');  bar.setAttribute('aria-hidden', 'false'); };
   const closePower = () => { bar.classList.remove('open'); bar.setAttribute('aria-hidden', 'true'); };
   const closeAll   = () => { closeMenu(); closePower(); };
@@ -109,19 +135,21 @@
   }
   $('cd-cancel').addEventListener('click', (e) => { e.stopPropagation(); cancelCountdown(); });
 
-  // ---- click-count on the hub: 1 = radial menu, 2 = Bench mode, 3 = shutdown
+  // ---- click-count on the hub: 1 = radial menu, 2 = Bench mode, 3 = shutdown.
+  // The first click acts at once (docs/MOTION.md §1) instead of waiting 300ms to
+  // rule out a double-click; a 2nd click takes the menu back down at once. Bench
+  // itself still waits out the window: it covers the hub, so opening it early
+  // would swallow the 3rd click of a triple-click shutdown.
   const hit = $('hub-hit');
   let clicks = 0, tap = null;
   hit.addEventListener('click', (e) => {
     e.stopPropagation();
     clicks += 1;
     clearTimeout(tap);
-    tap = setTimeout(() => {
-      if (clicks === 1)      { closePower(); menu.classList.contains('open') ? closeMenu() : openMenu(); }
-      else if (clicks === 2) { closeAll();   toggleBench(); }
-      else                   { closeAll();   startCountdown(); }
-      clicks = 0;
-    }, 300);
+    if (clicks === 1)      { closePower(); menu.classList.contains('open') ? closeMenu() : openMenu(); }
+    else if (clicks === 2) { closeAll(); }
+    else                   { closeAll(); startCountdown(); clicks = 0; return; }
+    tap = setTimeout(() => { if (clicks === 2) toggleBench(); clicks = 0; }, 300);
   });
 
   // power-bar buttons
@@ -133,6 +161,37 @@
   document.querySelectorAll('.launch .it, .powerbtns button').forEach((el) => {
     el.addEventListener('click', (e) => { e.stopPropagation(); doAction(el.dataset.act); });
   });
+
+  // ---- glass light: the specular highlight follows the pointer across the
+  // hovered glass surface (R4). Set on that element only, so nothing else restyles.
+  document.addEventListener('pointermove', (e) => {
+    const el = e.target.closest && e.target.closest('.hm-item, .powerbar, .powerbtns button');
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    el.style.setProperty('--lx', ((e.clientX - r.left) / r.width * 100).toFixed(1) + '%');
+    el.style.setProperty('--ly', ((e.clientY - r.top) / r.height * 100).toFixed(1) + '%');
+  });
+
+  // ---- launchers: one glass highlight glides to the item under the pointer (R5)
+  const launch = document.querySelector('.launch');
+  if (launch) {
+    const hl = document.createElement('div');
+    hl.className = 'hl';
+    launch.insertBefore(hl, launch.firstChild);
+    launch.addEventListener('pointerover', (e) => {
+      const it = e.target.closest('.it');
+      if (!it) return;
+      if (!launch.classList.contains('hov')) {           // first arrival: appear in place, don't slide in from the top
+        hl.style.transition = 'none';
+        hl.style.setProperty('--hy', it.offsetTop + 'px');
+        void hl.offsetWidth;
+        hl.style.transition = '';
+      }
+      hl.style.setProperty('--hy', it.offsetTop + 'px');
+      launch.classList.add('hov');
+    });
+    launch.addEventListener('pointerleave', () => launch.classList.remove('hov'));
+  }
 
   // Bench: exit button + clicking the backdrop closes it
   const benchExit = $('bench-exit');

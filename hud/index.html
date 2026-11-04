@@ -43,6 +43,18 @@
 
   --font-ui:    'Inter','Segoe UI',system-ui,sans-serif;
   --font-mono:  'JetBrains Mono','SF Mono',ui-monospace,monospace;
+
+  /* ---- motion (docs/MOTION.md) ----
+     Springs sampled from m·x″ = −k·x − b·x′ into linear(). A curve only fits
+     its own duration, so always pair --spring-x with --dur-x. */
+  --spring-snappy: linear(0, 0.057, 0.179, 0.324, 0.465, 0.594, 0.699, 0.782, 0.847, 0.895, 0.93, 0.955, 0.972, 0.984, 0.992, 0.996, 0.999, 1.001, 1.001, 1.002, 1.002, 1.001, 1.001, 1.001, 1.001, 1.001, 1, 1, 1, 1, 1, 1, 1);
+  --dur-snappy: .5s;   /* k500 b40 — firm, no visible overshoot */
+  --spring-bounce: linear(0, 0.094, 0.298, 0.529, 0.737, 0.899, 1.005, 1.062, 1.084, 1.082, 1.067, 1.048, 1.029, 1.013, 1.002, 0.996, 0.993, 0.993, 0.994, 0.995, 0.997, 0.998, 0.999, 1, 1.001, 1.001, 1.001, 1, 1, 1, 1, 1, 1);
+  --dur-bounce: .8s;   /* k320 b22 — 8.5% overshoot, for things arriving */
+  --spring-gentle: linear(0, 0.046, 0.149, 0.27, 0.394, 0.509, 0.609, 0.691, 0.761, 0.816, 0.86, 0.895, 0.921, 0.941, 0.957, 0.968, 0.977, 0.983, 0.988, 0.991, 0.994, 0.996, 0.997, 0.998, 0.999, 0.999, 0.999, 1, 1, 1, 1, 1, 1);
+  --dur-gentle: .8s;   /* k180 b26 — live data settles before the next 1s tick */
+  --ease-exit: cubic-bezier(.23,1,.32,1);
+  --dur-exit: .16s;    /* exits are always faster than entrances */
 }
 
 *{margin:0;padding:0;box-sizing:border-box}
@@ -112,31 +124,37 @@ body{
 .r1{--m:radial-gradient(circle,transparent 265px,#000 265.5px,#000 270px,transparent 271px);
   width:540px;height:540px;
   background:conic-gradient(from 0deg,var(--ice-bright),var(--ice) 55deg,rgb(var(--ice-rgb) / .12) 120deg,transparent 165deg);
-  animation:spin 14s steps(280) infinite reverse}
+  animation:spin 14s steps(140) infinite reverse}
 .r2{--m:radial-gradient(circle,transparent 223px,#000 223.5px,#000 228px,transparent 229px);
   width:456px;height:456px;
   background:conic-gradient(from 180deg,var(--ice-bright),var(--ice) 55deg,rgb(var(--ice-rgb) / .12) 120deg,transparent 165deg);
-  animation:spin 12s steps(240) infinite}
+  animation:spin 12s steps(120) infinite}
 .r3{--m:radial-gradient(circle,transparent 185px,#000 185.5px,#000 190px,transparent 191px);
   width:380px;height:380px;
   background:conic-gradient(from 240deg,var(--ice-bright),var(--ice) 55deg,rgb(var(--ice-rgb) / .12) 120deg,transparent 165deg);
-  animation:spin 10s steps(200) infinite}
+  animation:spin 10s steps(100) infinite}
 .r4{--m:radial-gradient(circle,transparent 151px,#000 151.5px,#000 156px,transparent 157px);
   width:312px;height:312px;
   background:conic-gradient(from 120deg,var(--ice-bright),var(--ice) 55deg,rgb(var(--ice-rgb) / .12) 120deg,transparent 165deg);
-  animation:spin 8s steps(180) infinite reverse}
+  animation:spin 8s steps(80) infinite reverse}
 .r5{--m:radial-gradient(circle,transparent 118px,#000 118.5px,#000 123px,transparent 124px);
   width:246px;height:246px;
   background:conic-gradient(from 300deg,var(--ice-bright),var(--ice) 55deg,rgb(var(--ice-rgb) / .12) 120deg,transparent 165deg);
-  animation:spin 6s steps(160) infinite}
+  animation:spin 6s steps(60) infinite}
 
 /* the "ruler" — tick-mark ring · spinning CCW */
 .ruler{--m:radial-gradient(circle, transparent 197px, #000 198px, #000 207px, transparent 208px);
   width:414px;height:414px;border:none!important;
   background:repeating-conic-gradient(rgb(var(--ice-bright-rgb) / .6) 0deg 0.4deg, transparent 0.4deg 5deg);
-  animation:spin 40s steps(360) infinite reverse}
+  animation:spin 40s steps(400) infinite reverse}
 
 @keyframes spin{to{transform:rotate(360deg)}}
+/* AMBIENT 10 FPS GRID (docs/MOTION.md §6). Every looping animation steps on the
+   same 100ms beat: steps = (keyframe segment length) / 0.1s, e.g. r1 14s → 140,
+   a 3s 0→50%→100% pulse → steps(15) per 1.5s half. Under the overlay's software
+   renderer each frame repaints the whole window, so smooth loops (and loops on
+   different beats) pinned a CPU core while only reaching ~12 fps. Measured:
+   98% → ~45% of a core. Things you touch keep their smooth springs. */
 
 /* cardinal labels */
 .cardinal{position:absolute;font-family:var(--font-mono);font-size:11px;color:rgb(var(--ice-rgb) / .6);letter-spacing:1px}
@@ -157,20 +175,20 @@ body{
     inset 0 0 46px rgba(255,255,255,.28),   /* internal luminosity */
     inset 0 0 20px rgb(var(--ice-hi-rgb) / .35),
     0 0 14px rgb(var(--ice-rgb) / .4);          /* tight edge glow only — no far bloom */
-  animation:orbPulse 3s ease-in-out infinite;
+  animation:orbPulse 3s steps(15) infinite;
 }
 .orb .glow{
   inset:8%;
   background:radial-gradient(circle at 42% 40%,
     rgb(var(--ice-hi-rgb) / .55) 0%, rgb(var(--ice-rgb) / .32) 50%, transparent 100%);
   box-shadow:inset 0 0 26px rgb(var(--ice-hi-rgb) / .25);   /* contained — no outer bloom */
-  animation:orbGlow 4s ease-in-out infinite reverse;
+  animation:orbGlow 4s steps(20) infinite reverse;
 }
 .orb .hi{
   inset:20%;
   background:radial-gradient(circle at 60% 30%,
     rgba(255,255,255,.55) 0%, rgb(var(--ice-rgb) / .2) 42%, transparent 72%);
-  animation:orbShimmer 5s ease-in-out infinite;   /* glow only, no rotation */
+  animation:orbShimmer 5s steps(25) infinite;   /* glow only, no rotation */
 }
 /* segmented reactor blades ring around the orb — STATIC, only glows */
 .blades{position:absolute;width:210px;height:210px;border-radius:50%;will-change:opacity;
@@ -179,7 +197,7 @@ body{
   mask:radial-gradient(circle, transparent 78px, #000 80px, #000 98px, transparent 100px);
   -webkit-mask:radial-gradient(circle, transparent 78px, #000 80px, #000 98px, transparent 100px);
   opacity:.85;
-  animation:bladePulse 3s ease-in-out infinite;   /* glow bright↔dim, no spin */
+  animation:bladePulse 3s steps(15) infinite;   /* glow bright↔dim, no spin */
 }
 
 @keyframes orbPulse{
@@ -225,7 +243,7 @@ body{
 .panel .head{display:flex;align-items:center;justify-content:space-between;
   font-size:11px;font-weight:600;letter-spacing:2px;color:var(--muted)}
 .panel .head .dot{width:6px;height:6px;border-radius:50%;background:var(--gold);
-  box-shadow:0 0 8px var(--gold);animation:blink 2.4s ease-in-out infinite}
+  box-shadow:0 0 8px var(--gold);animation:blink 2.4s steps(12) infinite}
 @keyframes blink{0%,100%{opacity:.5}50%{opacity:1}}
 .panel .rule{height:1px;background:linear-gradient(90deg,var(--glass-brd),transparent);margin:10px 0 12px}
 
@@ -240,12 +258,18 @@ body{
 .stat .aux{font-size:10px;color:var(--muted);font-family:var(--font-mono)}
 .bar{height:7px;border-radius:4px;background:rgb(var(--ice-rgb) / .09);position:relative;
   box-shadow:inset 0 0 0 1px rgb(var(--ice-rgb) / .06)}
-.bar>i{position:absolute;left:0;top:0;bottom:0;width:0%;border-radius:4px;
+/* fills grow with scaleX (compositor only) — animating width re-ran layout every
+   second, because a new value lands each tick (docs/MOTION.md §4) */
+.bar>i{position:absolute;left:0;top:0;bottom:0;width:100%;border-radius:4px;
   background:linear-gradient(90deg,var(--ice-deep),var(--ice) 72%,var(--ice-bright));
   box-shadow:0 0 10px rgb(var(--ice-rgb) / .55), inset 0 0 6px rgb(var(--ice-hi-rgb) / .25);
-  transition:width 1.1s cubic-bezier(.2,.7,.2,1)}
-/* glowing playhead at the fill tip */
-.bar>i::after{content:"";position:absolute;right:-1px;top:50%;transform:translateY(-50%);
+  transform-origin:left center;transform:scaleX(0);will-change:transform;
+  transition:transform var(--dur-gentle) var(--spring-gentle)}
+/* glowing playhead at the fill tip: a full-width layer slid with translateX (a
+   % of its own width = the bar's), so the dot is never squashed by the scale */
+.bar>.tip{position:absolute;inset:0;pointer-events:none;transform:translateX(-100%);will-change:transform;
+  transition:transform var(--dur-gentle) var(--spring-gentle)}
+.bar>.tip::after{content:"";position:absolute;right:-1px;top:50%;transform:translateY(-50%);
   width:6px;height:6px;border-radius:50%;background:var(--ice-hi);
   box-shadow:0 0 8px 2px rgb(var(--ice-rgb) / .8)}
 /* fine segment ticks overlaid, so the bar reads like a calibrated gauge */
@@ -261,7 +285,7 @@ body{
 #pwr.charging .aux{color:var(--gold)}
 #pwr.charging::before{background:linear-gradient(180deg,var(--gold),#8a6f2e 60%,transparent);
   box-shadow:0 0 12px rgba(201,162,75,.6)}
-#pwr.charging .bar>i::after{background:#ffe8b0;box-shadow:0 0 8px 2px rgba(201,162,75,.85)}
+#pwr.charging .bar>.tip::after{background:#ffe8b0;box-shadow:0 0 8px 2px rgba(201,162,75,.85)}
 
 /* left cluster position */
 .left{left:52px;width:280px}
@@ -284,9 +308,11 @@ body{
 .tele-sec:first-child{margin-top:2px}
 .mini-bar{height:5px;border-radius:3px;background:rgb(var(--ice-rgb) / .09);position:relative;margin-top:6px;
   box-shadow:inset 0 0 0 1px rgb(var(--ice-rgb) / .06)}
-.mini-bar>i{display:block;height:100%;width:0%;border-radius:3px;
+.mini-bar>i{display:block;height:100%;width:100%;border-radius:3px;
   background:linear-gradient(90deg,var(--ice-deep),var(--ice) 72%,var(--ice-bright));
-  box-shadow:0 0 8px rgb(var(--ice-rgb) / .5);transition:width 1.1s cubic-bezier(.2,.7,.2,1)}
+  box-shadow:0 0 8px rgb(var(--ice-rgb) / .5);
+  transform-origin:left center;transform:scaleX(0);will-change:transform;
+  transition:transform var(--dur-gentle) var(--spring-gentle)}
 
 /* fan speedometer */
 .gauge-wrap{display:flex;justify-content:center;margin-top:8px}
@@ -339,9 +365,17 @@ body{
 .hub-hit{position:absolute;left:50%;top:50%;width:150px;height:150px;
   transform:translate(-50%,-50%);border-radius:50%;cursor:pointer;z-index:6;
   pointer-events:auto}
-.hub-hit:hover{box-shadow:0 0 0 2px rgb(var(--ice-bright-rgb) / .25) inset}
+@media (hover:hover) and (pointer:fine){
+  .hub-hit:hover{box-shadow:0 0 0 2px rgb(var(--ice-bright-rgb) / .25) inset}
+}
+/* press: the core gives under your finger the instant you press (pointer-down,
+   not click), then springs back. `scale` is its own property, so it composes
+   with the voice breathing on `transform` instead of replacing it. */
+.orb{scale:1}
+.reactor:has(.hub-hit:active) .orb{scale:.93;--ds:.08s;--es:var(--ease-exit)}
 
-/* radial menu — items bloom out from the centre to 12 points */
+/* radial menu — items bloom out from the centre to 12 points.
+   Closed state = how it LEAVES: fast, together, no stagger. */
 .hubmenu{position:absolute;left:50%;top:50%;width:0;height:0;z-index:20;
   pointer-events:none}
 .hubmenu.open{pointer-events:auto}
@@ -351,55 +385,91 @@ body{
   font-family:var(--font-mono);font-size:11px;font-weight:600;letter-spacing:1px;
   white-space:nowrap;cursor:pointer;text-align:center;
   box-shadow:0 8px 26px rgba(0,0,0,.55),inset 0 1px 0 var(--glass-hi);
-  transform:translate(-50%,-50%) scale(.2);opacity:0;
-  transition:transform .34s cubic-bezier(.2,.8,.2,1.2),opacity .28s ease,
-             border-color .2s,color .2s,background .2s}
+  transform:translate(-50%,-50%) scale(.2);opacity:0;scale:1;translate:0 0;
+  /* one transition list; states only swap the variables in it */
+  transition:transform var(--tt,var(--dur-exit)) var(--te,var(--ease-exit)) var(--tdl,0s),
+             opacity var(--ot,var(--dur-exit)) var(--ease-exit) var(--tdl,0s),
+             scale var(--ds,var(--dur-snappy)) var(--es,var(--spring-snappy)),
+             translate var(--td,var(--dur-bounce)) var(--spring-bounce),
+             border-color .2s,color .2s,background-color .2s,box-shadow .2s,
+             visibility 0s linear var(--vdl,var(--dur-exit))}
+/* closed = visibility:hidden once the exit ends, so their glass blur isn't
+   re-rendered over the spinning reactor while nobody can see it */
+.hm-item{visibility:hidden}
+/* open state = how it ARRIVES: a bouncy spring, staggered round the ring */
 .hubmenu.open .hm-item{opacity:1;
-  transform:translate(calc(-50% + var(--x)),calc(-50% + var(--y))) scale(1)}
-/* dock-style magnify on hover */
-.hubmenu.open .hm-item:hover{
-  transform:translate(calc(-50% + var(--x)),calc(-50% + var(--y))) scale(1.28);
-  border-color:var(--ice);color:var(--ice-bright);
-  background:rgba(18,30,40,.96);box-shadow:0 10px 30px rgba(0,0,0,.6),0 0 18px rgb(var(--ice-rgb) / .35)}
-.hm-item.danger:hover{border-color:var(--red);color:#ff9a9d;
-  box-shadow:0 10px 30px rgba(0,0,0,.6),0 0 18px rgba(229,72,77,.4)}
+  transform:translate(calc(-50% + var(--x)),calc(-50% + var(--y))) scale(1);
+  --tt:var(--dur-bounce);--te:var(--spring-bounce);--tdl:calc(var(--i,0) * 14ms);--ot:.2s;
+  visibility:visible;--vdl:0s}
+/* rubber-band pull towards the pointer (control.js) follows 1:1 while it moves */
+.hm-item.mag{--td:0s}
+/* dock-style magnify on hover — snappy, and no stagger delay once open */
+@media (hover:hover) and (pointer:fine){
+  .hubmenu.open .hm-item:hover{
+    transform:translate(calc(-50% + var(--x)),calc(-50% + var(--y))) scale(1.28);
+    --tt:var(--dur-snappy);--te:var(--spring-snappy);--tdl:0s;
+    border-color:var(--ice);color:var(--ice-bright);
+    background:rgba(18,30,40,.96);box-shadow:0 10px 30px rgba(0,0,0,.6),0 0 18px rgb(var(--ice-rgb) / .35)}
+  .hm-item.danger:hover{border-color:var(--red);color:#ff9a9d;
+    box-shadow:0 10px 30px rgba(0,0,0,.6),0 0 18px rgba(229,72,77,.4)}
+}
+/* every pressable gives the instant it's pressed, and springs back on release */
+.hm-item:active,.powerbar button:active,.powerbtns button:active,.cd-cancel:active,.bench .exit:active{
+  scale:.96;--ds:.08s;--es:var(--ease-exit)}
 
 /* quick power bar (double-click) */
 .powerbar{position:absolute;left:50%;top:calc(50% - 250px);
   transform:translate(-50%,-50%) scale(.9);z-index:21;display:flex;gap:10px;
   padding:12px;border:1px solid var(--glass-brd);border-radius:16px;
   background:rgba(10,16,22,.94);box-shadow:0 14px 40px rgba(0,0,0,.6),inset 0 1px 0 var(--glass-hi);
-  opacity:0;pointer-events:none;transition:opacity .25s ease,transform .28s cubic-bezier(.2,.8,.2,1.1)}
-.powerbar.open{opacity:1;pointer-events:auto;transform:translate(-50%,-50%) scale(1)}
+  opacity:0;pointer-events:none;
+  visibility:hidden;
+  transition:opacity var(--dur-exit) var(--ease-exit),transform var(--dur-exit) var(--ease-exit),visibility 0s linear var(--dur-exit)}
+.powerbar.open{opacity:1;pointer-events:auto;transform:translate(-50%,-50%) scale(1);visibility:visible;
+  transition:opacity .2s ease-out,transform var(--dur-bounce) var(--spring-bounce),visibility 0s}
 .powerbar button{display:flex;flex-direction:column;align-items:center;gap:5px;
   min-width:84px;padding:12px 10px;border:1px solid transparent;border-radius:12px;
   background:rgb(var(--ice-rgb) / .06);color:var(--paper);cursor:pointer;
-  font-family:var(--font-mono);font-size:20px;line-height:1;transition:all .18s}
+  font-family:var(--font-mono);font-size:20px;line-height:1;scale:1;
+  transition:background-color .18s,border-color .18s,box-shadow .18s,
+             scale var(--ds,var(--dur-snappy)) var(--es,var(--spring-snappy))}
 .powerbar button span{font-size:9px;letter-spacing:1.5px;color:var(--muted)}
-.powerbar button:hover{background:rgb(var(--ice-rgb) / .14);border-color:var(--ice);
-  box-shadow:0 0 16px rgb(var(--ice-rgb) / .3)}
-.powerbar button:hover span{color:var(--ice)}
-.powerbar button.danger:hover{background:rgba(229,72,77,.14);border-color:var(--red);
-  box-shadow:0 0 16px rgba(229,72,77,.35)}
-.powerbar button.danger:hover span{color:#ff9a9d}
+@media (hover:hover) and (pointer:fine){
+  .powerbar button:hover{background:rgb(var(--ice-rgb) / .14);border-color:var(--ice);
+    box-shadow:0 0 16px rgb(var(--ice-rgb) / .3)}
+  .powerbar button:hover span{color:var(--ice)}
+  .powerbar button.danger:hover{background:rgba(229,72,77,.14);border-color:var(--red);
+    box-shadow:0 0 16px rgba(229,72,77,.35)}
+  .powerbar button.danger:hover span{color:#ff9a9d}
+}
 
 /* shutdown countdown */
 .countdown{position:absolute;inset:0;z-index:40;display:flex;
   flex-direction:column;align-items:center;justify-content:center;gap:14px;
   background:radial-gradient(circle at 50% 45%,rgba(6,8,11,.86),rgba(6,8,11,.97));
-  opacity:0;pointer-events:none;transition:opacity .25s ease}
-.countdown.open{opacity:1;pointer-events:auto}
+  opacity:0;pointer-events:none;transition:opacity var(--dur-exit) var(--ease-exit)}
+.countdown.open{opacity:1;pointer-events:auto;transition:opacity .25s ease-out}
 .cd-num{font-family:var(--font-mono);font-size:120px;font-weight:800;color:#ff9a9d;
   text-shadow:0 0 40px rgba(229,72,77,.5);line-height:1}
 .cd-msg{font-family:var(--font-mono);font-size:16px;letter-spacing:6px;color:var(--paper)}
 .cd-cancel{margin-top:10px;padding:12px 28px;border:1px solid var(--ice);
   background:rgb(var(--ice-rgb) / .1);color:var(--ice-bright);border-radius:12px;
-  font-family:var(--font-mono);font-size:13px;letter-spacing:2px;cursor:pointer;
-  transition:all .18s}
-.cd-cancel:hover{background:rgb(var(--ice-rgb) / .22);box-shadow:0 0 20px rgb(var(--ice-rgb) / .4)}
+  font-family:var(--font-mono);font-size:13px;letter-spacing:2px;cursor:pointer;scale:1;
+  transition:background-color .18s,box-shadow .18s,scale var(--ds,var(--dur-snappy)) var(--es,var(--spring-snappy))}
+@media (hover:hover) and (pointer:fine){
+  .cd-cancel:hover{background:rgb(var(--ice-rgb) / .22);box-shadow:0 0 20px rgb(var(--ice-rgb) / .4)}
+}
 
 @media (prefers-reduced-motion:reduce){
   *{animation-duration:.001ms!important;animation-iteration-count:1!important}
+  /* gentler, not off: springs become a short fade, nothing travels or shrinks */
+  :root{--spring-snappy:ease-out;--spring-bounce:ease-out;--spring-gentle:ease-out;
+        --dur-snappy:.15s;--dur-bounce:.15s;--dur-gentle:.15s}
+  .hm-item,.hubmenu.open .hm-item,.hubmenu.open .hm-item:hover{
+    transform:translate(calc(-50% + var(--x)),calc(-50% + var(--y)));--tdl:0s}
+  .hm-item,.powerbar,.powerbar.open{translate:none!important;scale:none!important}
+  .powerbar,.powerbar.open{transform:translate(-50%,-50%)}
+  .orb,.powerbar button,.powerbtns button,.cd-cancel,.bench .exit,.launch .it::after{scale:none!important}
 }
 
 /* IDLE / OCCLUDED: when the overlay is fully covered by a window (i.e. you're
@@ -472,8 +542,7 @@ html.rayo-idle *::after{animation-play-state:paused!important}
 .aw{position:relative;width:66px;height:66px;flex:none}
 .arcg{position:absolute;inset:0;border-radius:50%;
   background:conic-gradient(from -90deg,var(--ice) calc(var(--p,0)*1%),rgb(var(--ice-rgb)/.12) 0);
-  -webkit-mask:radial-gradient(circle,transparent 25px,#000 26px);mask:radial-gradient(circle,transparent 25px,#000 26px);
-  transition:background .8s cubic-bezier(.2,.7,.2,1)}
+  -webkit-mask:radial-gradient(circle,transparent 25px,#000 26px);mask:radial-gradient(circle,transparent 25px,#000 26px)}
 .aw .n{position:absolute;inset:0;display:grid;place-content:center;font-size:16px;font-weight:700;color:var(--ice-bright)}
 .vrow .t .k{font-size:11px;letter-spacing:2px;color:var(--muted)}
 .vrow .t .v{font-size:12.5px;color:var(--paper);margin-top:3px}
@@ -484,9 +553,9 @@ html.rayo-idle *::after{animation-play-state:paused!important}
 .cap .row .k{color:var(--muted)} .cap .row .v{color:var(--ice-bright)}
 .cap .bar{height:7px;border-radius:4px;background:rgb(var(--ice-rgb)/.09);position:relative;
   box-shadow:inset 0 0 0 1px rgb(var(--ice-rgb)/.06)}
-.cap .bar>i{position:absolute;left:0;top:0;bottom:0;width:0%;border-radius:4px;
+.cap .bar>i{border-radius:4px;
   background:linear-gradient(90deg,var(--ice-deep),var(--ice) 72%,var(--ice-bright));
-  box-shadow:0 0 10px rgb(var(--ice-rgb)/.55);transition:width 1.1s cubic-bezier(.2,.7,.2,1)}
+  box-shadow:0 0 10px rgb(var(--ice-rgb)/.55)}
 .cap.charging .bar>i{background:linear-gradient(90deg,#8a6f2e,var(--gold));box-shadow:0 0 10px rgba(201,162,75,.55)}
 .cap.charging .row .v{color:var(--gold)}
 
@@ -515,8 +584,13 @@ html.rayo-idle *::after{animation-play-state:paused!important}
 .launch .rail{position:absolute;right:3px;top:12px;bottom:12px;width:1px;background:linear-gradient(rgb(var(--ice-rgb)/.5),transparent)}
 .launch .it{display:flex;align-items:center;justify-content:flex-end;gap:12px;height:32px;
   font-size:13px;letter-spacing:1px;color:var(--paper);cursor:pointer;transition:color .18s}
-.launch .it::after{content:"";width:7px;height:7px;border-radius:50%;background:var(--ice);box-shadow:0 0 8px var(--ice);flex:none}
-.launch .it:hover{color:var(--ice-bright)} .launch .it:hover::after{box-shadow:0 0 12px 2px var(--ice)}
+.launch .it::after{content:"";width:7px;height:7px;border-radius:50%;background:var(--ice);box-shadow:0 0 8px var(--ice);flex:none;
+  scale:1;transition:scale var(--ds,var(--dur-snappy)) var(--es,var(--spring-snappy))}
+@media (hover:hover) and (pointer:fine){
+  .launch .it:hover{color:var(--ice-bright)} .launch .it:hover::after{box-shadow:0 0 12px 2px var(--ice)}
+}
+/* the launcher's dot is the part that gives when pressed */
+.launch .it:active::after{scale:.6;--ds:.08s;--es:var(--ease-exit)}
 
 /* bottom-left network + cooling gauge */
 .netblk{left:100px;bottom:150px;width:280px}
@@ -529,10 +603,13 @@ html.rayo-idle *::after{animation-play-state:paused!important}
 /* power buttons bottom-right */
 .powerbtns{right:96px;bottom:150px;display:flex;gap:12px}
 .powerbtns button{background:rgb(var(--ice-rgb)/.06);border:1px solid rgb(var(--ice-rgb)/.35);color:var(--ice);
-  padding:12px 18px;border-radius:10px;font-family:var(--font-mono);font-size:11px;letter-spacing:2px;cursor:pointer;transition:all .18s}
-.powerbtns button:hover{background:rgb(var(--ice-rgb)/.14);box-shadow:0 0 14px rgb(var(--ice-rgb)/.35)}
+  padding:12px 18px;border-radius:10px;font-family:var(--font-mono);font-size:11px;letter-spacing:2px;cursor:pointer;scale:1;
+  transition:background-color .18s,box-shadow .18s,scale var(--ds,var(--dur-snappy)) var(--es,var(--spring-snappy))}
 .powerbtns button.danger{border-color:rgba(229,72,77,.5);color:#ff9a9d}
-.powerbtns button.danger:hover{background:rgba(229,72,77,.14);box-shadow:0 0 14px rgba(229,72,77,.4)}
+@media (hover:hover) and (pointer:fine){
+  .powerbtns button:hover{background:rgb(var(--ice-rgb)/.14);box-shadow:0 0 14px rgb(var(--ice-rgb)/.35)}
+  .powerbtns button.danger:hover{background:rgba(229,72,77,.14);box-shadow:0 0 14px rgba(229,72,77,.4)}
+}
 
 /* Command Deck position overrides (beat the classic id-selectors) */
 #pwr.cap{left:100px;top:672px}
@@ -547,8 +624,15 @@ html.rayo-idle *::after{animation-play-state:paused!important}
    ============================================================ */
 .bench{position:fixed;inset:0;z-index:60;font-family:var(--font-mono);color:var(--paper);
   background:radial-gradient(70% 90% at 66% 50%, rgb(var(--ice-rgb)/.07), var(--ink-0) 72%), var(--ink-0);
-  opacity:0;pointer-events:none;transition:opacity .4s ease}
-.bench.open{opacity:1;pointer-events:auto}
+  /* hidden = visibility:hidden once the fade-out ends. At opacity:0 alone the
+     full-screen Bench was still painted every frame, and its stat bars
+     re-animated after every 1s update: ~25% of a core for nothing on screen. */
+  opacity:0;visibility:hidden;pointer-events:none;
+  transition:opacity .2s var(--ease-exit),visibility 0s linear .2s}
+.bench.open{opacity:1;visibility:visible;pointer-events:auto;transition:opacity .4s ease-out,visibility 0s}
+/* and its spinners freeze until it's summoned (!important: the bench rules
+   below use the `animation` shorthand, which would reset play-state to running) */
+.bench:not(.open),.bench:not(.open) *{animation-play-state:paused!important}
 .bench .bgrid{position:absolute;inset:0;opacity:.5;
   background:repeating-linear-gradient(0deg,rgb(var(--ice-rgb)/.05) 0 1px,transparent 1px 60px),
              repeating-linear-gradient(90deg,rgb(var(--ice-rgb)/.05) 0 1px,transparent 1px 60px)}
@@ -559,28 +643,32 @@ html.rayo-idle *::after{animation-play-state:paused!important}
 .bench .bhead .tag{margin-top:16px;display:inline-block;font-size:10px;letter-spacing:3px;color:var(--ice);
   border:1px solid rgb(var(--ice-rgb)/.4);border-radius:20px;padding:5px 12px}
 .bench .exit{position:absolute;top:56px;right:70px;font-size:11px;letter-spacing:3px;color:var(--muted);
-  border:1px solid rgb(var(--ice-rgb)/.3);border-radius:20px;padding:8px 16px;cursor:pointer;transition:all .18s}
-.bench .exit:hover{color:var(--ice);border-color:var(--ice);box-shadow:0 0 14px rgb(var(--ice-rgb)/.3)}
+  border:1px solid rgb(var(--ice-rgb)/.3);border-radius:20px;padding:8px 16px;cursor:pointer;scale:1;
+  transition:color .18s,border-color .18s,box-shadow .18s,scale var(--ds,var(--dur-snappy)) var(--es,var(--spring-snappy))}
+@media (hover:hover) and (pointer:fine){
+  .bench .exit:hover{color:var(--ice);border-color:var(--ice);box-shadow:0 0 14px rgb(var(--ice-rgb)/.3)}
+}
 .bench .diag{position:absolute;left:70px;top:210px;width:300px}
 .bench .diag .sec{font-size:10px;letter-spacing:3px;color:var(--muted);margin:22px 0 12px;
   border-bottom:1px solid rgb(var(--ice-rgb)/.15);padding-bottom:6px}
 .bench .diag .r{display:flex;justify-content:space-between;font-size:12px;margin:10px 0}
 .bench .diag .r .k{color:var(--muted)} .bench .diag .r .v{color:var(--ice-bright)} .bench .diag .r .v.ok{color:#7fe3b0}
 .bench .diag .mb{height:4px;background:rgb(var(--ice-rgb)/.1);border-radius:3px;margin-top:6px;position:relative}
-.bench .diag .mb i{position:absolute;left:0;top:0;bottom:0;width:0%;border-radius:3px;
-  background:linear-gradient(90deg,var(--ice-deep),var(--ice));box-shadow:0 0 8px rgb(var(--ice-rgb)/.6);transition:width .8s}
+.bench .diag .mb i{position:absolute;left:0;top:0;bottom:0;width:100%;border-radius:3px;
+  background:linear-gradient(90deg,var(--ice-deep),var(--ice));box-shadow:0 0 8px rgb(var(--ice-rgb)/.6);
+  transform-origin:left center;transform:scaleX(0);transition:transform var(--dur-gentle) var(--spring-gentle)}
 .bench .stage2{position:absolute;right:150px;top:50%;transform:translateY(-50%);width:760px;height:760px}
 .bench svg{overflow:visible;width:760px;height:760px}
 .bench .wire{fill:none;stroke:rgb(var(--ice-rgb)/.5);stroke-width:1}
 .bench .wire.dim{stroke:rgb(var(--ice-rgb)/.22)}
 .bench .wire.hot{stroke:var(--ice-bright);stroke-width:1.5}
-.bench .spin{transform-origin:400px 400px;animation:brot 42s linear infinite}
-.bench .spin.rev{animation-duration:64s;animation-direction:reverse}
+.bench .spin{transform-origin:400px 400px;animation:brot 42s steps(420) infinite}
+.bench .spin.rev{animation-duration:64s;animation-timing-function:steps(640);animation-direction:reverse}
 @keyframes brot{to{transform:rotate(360deg)}}
 .bench .bcore{position:absolute;left:calc(50% - 55px);top:calc(50% - 55px);width:110px;height:110px;border-radius:50%;
   background:radial-gradient(circle at 40% 34%, var(--ice-hi), var(--ice-bright) 40%, var(--ice) 70%, var(--ice-deep));
   box-shadow:0 0 60px 14px rgb(var(--ice-rgb)/.5), inset 0 0 30px rgba(255,255,255,.4);
-  animation:orbPulse 3s ease-in-out infinite}
+  animation:orbPulse 3s steps(15) infinite}
 .bench .corelbl{position:absolute;left:50%;bottom:120px;transform:translateX(-50%);font-size:13px;
   letter-spacing:1px;color:var(--ice-bright);white-space:nowrap}
 .bench .co{position:absolute;font-size:11px;letter-spacing:1px}
@@ -603,7 +691,7 @@ html.rayo-idle *::after{animation-play-state:paused!important}
 html.rv-on .topstrip .vstate{display:inline}
 .topstrip .vstate::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;
   background:var(--ice);box-shadow:0 0 8px var(--ice);margin-right:7px;vertical-align:1px;
-  animation:blink 1.6s ease-in-out infinite}
+  animation:blink 1.6s steps(8) infinite}
 html.rv-listening .topstrip .vstate,html.rv-speaking .topstrip .vstate{color:var(--ice-bright)}
 html.rv-error .topstrip .vstate{color:#ff9a9d}
 html.rv-error .topstrip .vstate::before{background:var(--red);box-shadow:0 0 8px var(--red)}
@@ -620,14 +708,16 @@ html.rv-armed .vmeter{opacity:.22}
 html.rv-listening .vmeter,html.rv-speaking .vmeter{opacity:.95}
 /* the core breathes with your voice (scale lives on the container, so it
    composes with the orb's own pulse instead of fighting it) */
-.orb{transform:scale(var(--vo,1));transition:transform .22s cubic-bezier(.2,.8,.2,1)}
+.orb{transform:scale(var(--vo,1));
+  transition:transform .22s cubic-bezier(.2,.8,.2,1),scale var(--ds,var(--dur-snappy)) var(--es,var(--spring-snappy))}
 html.rv-listening .orb .core,html.rv-speaking .orb .core{box-shadow:inset 0 0 46px rgba(255,255,255,.35),
   inset 0 0 20px rgb(var(--ice-hi-rgb) / .45), 0 0 34px rgb(var(--ice-rgb) / .75)}
 
 /* what Rayo heard, as a subtitle under the reactor */
 .vcap{position:absolute;left:50%;top:842px;transform:translateX(-50%);z-index:4;text-align:center;
   font-family:var(--font-mono);pointer-events:none;opacity:0;transition:opacity .4s ease;white-space:nowrap}
-.vcap.show{opacity:1}
+.vcap{visibility:hidden;transition:opacity .4s ease,visibility 0s linear .4s}
+.vcap.show{opacity:1;visibility:visible;transition:opacity .4s ease,visibility 0s}
 .vcap .said{font-size:22px;color:var(--paper);letter-spacing:.5px;text-shadow:0 0 18px rgb(var(--ice-rgb) / .45)}
 .vcap .said:empty{display:none}
 .vcap .res{font-size:11px;letter-spacing:3px;color:var(--ice);margin-top:8px;text-transform:uppercase}
@@ -643,6 +733,161 @@ html.rv-thinking .topstrip .vstate{color:var(--gold)}
 html.rv-on .hm-item[data-act="voice"]{border-color:var(--ice);color:var(--ice-bright);
   box-shadow:0 8px 26px rgba(0,0,0,.55),0 0 16px rgb(var(--ice-rgb) / .45)}
 @media (prefers-reduced-motion:reduce){.vmeter,.orb{transition:none}}
+
+/* ============================================================
+   R3 — THE HUD TRANSFORMS WITH THE CONVERSATION (core/voice.js)
+   Listening: the reactor leans in. Thinking: the rings tip back in real 3D
+   perspective on a slightly angled axis (like Rose's ring), outer → inner, and
+   keep spinning in that tilted plane; the core stays a sphere. Answering
+   (html.rv-answer): the tilted reactor shrinks into the lower-right corner and
+   the glass cards open in the centre. Arrivals use --spring-bounce, departures
+   the quicker --spring-snappy. Rayo's own colours throughout.
+   ============================================================ */
+.reactor{translate:0 0;scale:1;perspective:1100px;
+  transition:translate var(--dur-snappy) var(--spring-snappy),scale var(--dur-snappy) var(--spring-snappy)}
+html.rv-listening .reactor{scale:1.04;
+  transition:translate var(--dur-bounce) var(--spring-bounce),scale var(--dur-bounce) var(--spring-bounce)}
+/* into the free space between the launchers and the power buttons */
+html.rv-answer .reactor{translate:var(--corner-x,600px) var(--corner-y,150px);scale:.42;
+  transition:translate var(--dur-bounce) var(--spring-bounce),scale var(--dur-bounce) var(--spring-bounce)}
+
+/* the tilt: each ring rotates about the same tipped axis, under the reactor's
+   shared perspective. Individual `rotate` sits outside the spin on `transform`,
+   so the arcs keep travelling round the tilted plane. Same axis at 0deg and
+   64deg, so the spring interpolates the angle only. */
+.reactor .ring,.reactor .blades,.reactor .vmeter{rotate:1 -.3 0 0deg;
+  transition:rotate var(--dur-snappy) var(--spring-snappy) calc(var(--ri,0) * 25ms)}
+.r1{--ri:0}.r2{--ri:1}.ruler{--ri:2}.r3{--ri:3}.r4{--ri:4}.r5{--ri:5}.reactor .blades{--ri:6}.reactor .vmeter{--ri:6}
+html.rv-thinking .reactor :is(.ring,.blades,.vmeter),
+html.rv-answer .reactor :is(.ring,.blades,.vmeter){rotate:1 -.3 0 64deg;
+  transition:rotate var(--dur-bounce) var(--spring-bounce) calc(var(--ri,0) * 25ms)}
+/* the vmeter keeps its own voice flare on transform, so it lists both */
+.reactor .vmeter{transition:opacity .35s ease,transform .22s cubic-bezier(.2,.8,.2,1),
+  rotate var(--dur-snappy) var(--spring-snappy) calc(var(--ri,0) * 25ms)}
+html.rv-thinking .reactor .vmeter,html.rv-answer .reactor .vmeter{
+  transition:opacity .35s ease,transform .22s cubic-bezier(.2,.8,.2,1),
+  rotate var(--dur-bounce) var(--spring-bounce) calc(var(--ri,0) * 25ms)}
+.reactor .cardinal{transition:opacity .2s var(--ease-exit)}
+html.rv-thinking .reactor .cardinal,html.rv-answer .reactor .cardinal{opacity:0}
+
+/* the answer grid — replaces the long subtitle while Rayo is answering */
+html.rv-answer .vcap{opacity:0!important}
+.vgrid{position:absolute;left:50%;top:470px;width:1100px;margin-left:-550px;z-index:5;
+  display:grid;grid-template-columns:270px 1fr 230px;gap:16px;align-items:start;pointer-events:none}
+.vg-card{position:relative;overflow:hidden;border-radius:14px;padding:16px 18px 18px 21px;
+  background:linear-gradient(180deg,rgb(var(--ice-rgb) / .07),rgb(var(--ice-rgb) / .015) 40%,transparent 70%),var(--glass);
+  border:1px solid var(--glass-brd);
+  box-shadow:0 14px 40px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.16),inset 0 -18px 30px rgba(0,0,0,.32);
+  /* leaving: together and fast */
+  opacity:0;transform:translateY(22px) scale(.96);visibility:hidden;
+  transition:opacity var(--dur-exit) var(--ease-exit),transform var(--dur-exit) var(--ease-exit),visibility 0s linear var(--dur-exit)}
+.vg-card::before{content:"";position:absolute;left:0;top:16px;bottom:16px;width:3px;border-radius:0 3px 3px 0;
+  background:linear-gradient(180deg,var(--ice-bright),var(--ice) 55%,transparent);box-shadow:0 0 12px rgb(var(--ice-rgb) / .55)}
+/* arriving: a spring, staggered left → right */
+html.rv-answer .vg-card{opacity:1;transform:none;visibility:visible;
+  transition:opacity .2s ease-out calc(var(--ci) * 45ms),transform var(--dur-bounce) var(--spring-bounce) calc(var(--ci) * 45ms),visibility 0s}
+.vg-you{--ci:0}.vg-rayo{--ci:1}.vg-state{--ci:2}
+.vg-k{font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:3px;color:var(--muted);margin-bottom:10px}
+.vg-rayo .vg-k{color:var(--ice)}
+.vg-you .vg-v{font-family:var(--font-mono);font-size:16px;line-height:1.5;color:var(--paper);
+  display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:6;overflow:hidden}
+.vg-rayo .vg-v{font-size:19px;line-height:1.55;color:var(--paper);text-shadow:0 0 14px rgb(var(--ice-rgb) / .25);
+  min-height:88px;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:9;overflow:hidden}
+.vg-state .vg-v{font-family:var(--font-mono);font-size:22px;font-weight:800;letter-spacing:2px;color:var(--ice-bright)}
+.vg-state .vg-aux{font-family:var(--font-mono);font-size:11px;letter-spacing:2px;color:var(--muted);margin-top:8px;text-transform:uppercase}
+.vg-state .vg-aux:empty{display:none}
+
+@media (prefers-reduced-motion:reduce){
+  /* gentler, not off: no tilt, no travel — the grid just fades in place */
+  /* the reactor still makes room for the cards, but jumps instead of gliding */
+  html.rv-listening .reactor{scale:none}
+  .reactor,html.rv-listening .reactor,html.rv-answer .reactor{transition:none}
+  html.rv-thinking .reactor :is(.ring,.blades,.vmeter),html.rv-answer .reactor :is(.ring,.blades,.vmeter){rotate:none}
+  .vg-card,html.rv-answer .vg-card{transform:none}
+}
+
+/* ============================================================
+   R4 — LIQUID GLASS, ON THE FLOATING CONTROLS ONLY
+   Apple's rule: glass belongs to the functional layer (menus, bars, popovers),
+   never the content layer, and sparingly. So: the radial menu, the quick power
+   bar, the answer cards, the subtitle — and the always-visible power buttons,
+   which get the look WITHOUT backdrop blur (blur re-renders under the overlay's
+   CPU renderer every frame; the transient surfaces only pay while open).
+   The material: a translucent "regular" fill, a backdrop blur with a saturation
+   lift, a specular rim brightest top-left, inner light along the top edge, and
+   a soft highlight that follows the pointer. Rayo's colours stay as they are.
+   ============================================================ */
+:root{
+  --lg-fill:  rgba(12,18,26,.58);
+  --lg-blur:  blur(22px) saturate(1.4);
+  --lg-sheen: linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,0) 46%);
+  --lg-rim:   linear-gradient(140deg,rgba(255,255,255,.55),rgba(255,255,255,.1) 28%,rgba(255,255,255,0) 55%,rgb(var(--ice-rgb) / .35));
+  --lg-rim-hot: linear-gradient(140deg,rgb(var(--ice-bright-rgb) / .95),rgb(var(--ice-rgb) / .3) 40%,rgb(var(--ice-rgb) / .75));
+  --lg-shadow:0 18px 44px rgba(0,0,0,.55),0 2px 6px rgba(0,0,0,.35),
+              inset 0 1px 0 rgba(255,255,255,.28),inset 0 -1px 0 rgba(255,255,255,.06),
+              inset 0 -14px 28px rgb(var(--ice-rgb) / .05);
+}
+.hm-item,.powerbar,.vg-card,.vcap,.powerbtns button{
+  border:1px solid transparent;
+  background:var(--lg-sheen) padding-box,linear-gradient(var(--lg-fill),var(--lg-fill)) padding-box,var(--lg-rim) border-box;
+  box-shadow:var(--lg-shadow)}
+.hm-item,.powerbar,.vg-card,.vcap{-webkit-backdrop-filter:var(--lg-blur);backdrop-filter:var(--lg-blur)}
+/* always on screen, so a lighter fill and no blur */
+.powerbtns button{background:var(--lg-sheen) padding-box,linear-gradient(rgba(12,18,26,.38),rgba(12,18,26,.38)) padding-box,var(--lg-rim) border-box}
+.powerbtns button.danger{background:var(--lg-sheen) padding-box,linear-gradient(rgba(12,18,26,.38),rgba(12,18,26,.38)) padding-box,
+  linear-gradient(140deg,rgba(255,154,157,.75),rgba(229,72,77,.15) 45%,rgba(229,72,77,.6)) border-box}
+@media (hover:hover) and (pointer:fine){
+  .hubmenu.open .hm-item:hover,.powerbtns button:hover{border-color:transparent;
+    background:var(--lg-sheen) padding-box,linear-gradient(rgba(16,28,38,.72),rgba(16,28,38,.72)) padding-box,var(--lg-rim-hot) border-box}
+  .hubmenu.open .hm-item.danger:hover,.powerbtns button.danger:hover{border-color:transparent;
+    background:var(--lg-sheen) padding-box,linear-gradient(rgba(40,14,18,.7),rgba(40,14,18,.7)) padding-box,
+    linear-gradient(140deg,#ffb3b5,rgba(229,72,77,.35) 40%,var(--red)) border-box}
+}
+/* the specular highlight follows the pointer (control.js sets --lx/--ly on the
+   hovered surface itself, so nothing else restyles) */
+.powerbtns button{position:relative}
+.hm-item::after,.powerbar::after,.powerbtns button::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;
+  background:radial-gradient(130px circle at var(--lx,30%) var(--ly,-30%),rgba(255,255,255,.18),transparent 62%);
+  opacity:0;transition:opacity .2s ease-out}
+@media (hover:hover) and (pointer:fine){
+  .hm-item:hover::after,.powerbar:hover::after,.powerbtns button:hover::after{opacity:1}
+}
+/* liquid press: glass squishes a touch more vertically than horizontally */
+.hm-item:active,.powerbtns button:active{scale:.97 .93}
+
+/* accessibility: Reduce Transparency → opaque, Increase Contrast → firm edges */
+@media (prefers-reduced-transparency:reduce){
+  .hm-item,.powerbar,.vg-card,.vcap,.powerbtns button{-webkit-backdrop-filter:none;backdrop-filter:none;
+    background:linear-gradient(rgba(10,16,22,.96),rgba(10,16,22,.96)) padding-box,var(--lg-rim) border-box}
+}
+@media (prefers-contrast:more){
+  .hm-item,.powerbar,.vg-card,.vcap,.powerbtns button{border:1px solid rgb(var(--ice-rgb) / .85);
+    background:linear-gradient(rgba(6,10,14,.95),rgba(6,10,14,.95))}
+}
+
+/* ============================================================
+   R5 — POLISH (the Northwind pass)
+   ============================================================ */
+/* one grid: every cluster sits 100px in from its side, the top pair level */
+.clock{left:100px;top:116px}
+.worb{right:100px}
+.powerbtns{right:100px}
+.baseline{left:100px}
+.status{right:100px}
+/* the subtitle reads on its own rounded glass container, whatever is behind */
+.vcap{padding:14px 26px 15px;border-radius:16px}
+.vcap .said:empty + .res{margin-top:0}
+/* the radial menu: one even width all the way round */
+.hm-item{min-width:0;width:98px;padding:9px 0}
+/* launchers: a glass highlight glides to the item under the pointer (control.js) */
+.launch .it{position:relative;z-index:1}
+.launch .hl{position:absolute;left:28px;right:-14px;top:0;height:32px;border-radius:10px;pointer-events:none;
+  background:linear-gradient(90deg,rgb(var(--ice-rgb) / .02),rgb(var(--ice-rgb) / .12));
+  border:1px solid rgb(var(--ice-rgb) / .22);box-shadow:inset 0 1px 0 rgba(255,255,255,.12);
+  opacity:0;translate:0 var(--hy,0px);
+  transition:translate var(--dur-snappy) var(--spring-snappy),opacity .15s var(--ease-exit)}
+.launch.hov .hl{opacity:1;transition:translate var(--dur-snappy) var(--spring-snappy),opacity .2s ease-out}
+@media (prefers-reduced-motion:reduce){.launch .hl{transition:opacity .15s}}
 </style>
 <script src="core/obs-fix.js"></script>
 </head>
@@ -714,6 +959,13 @@ html.rv-on .hm-item[data-act="voice"]{border-color:var(--ice);color:var(--ice-br
   </div>
 
   <div class="vcap" id="vcap"><div class="said"></div><div class="res"></div></div>
+
+  <!-- R3: the answer grid that springs open while Rayo answers (core/voice.js) -->
+  <div class="vgrid" id="vgrid" aria-live="polite">
+    <section class="vg-card vg-you"><div class="vg-k">YOU</div><div class="vg-v" id="vg-you"></div></section>
+    <section class="vg-card vg-rayo"><div class="vg-k">RAYO</div><div class="vg-v" id="vg-rayo"></div></section>
+    <section class="vg-card vg-state"><div class="vg-k">STATUS</div><div class="vg-v" id="vg-state">—</div><div class="vg-aux" id="vg-brain"></div></section>
+  </div>
 
   <div class="hubmenu" id="hubmenu" aria-hidden="true"></div>
   <div class="powerbar" id="powerbar" aria-hidden="true">

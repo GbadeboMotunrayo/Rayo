@@ -34,25 +34,55 @@
   }
   const isErr = (m) => /not available|didn't catch|no matching|unavailable|couldn't find|^no (document|browser|command|folder|app)/i.test(m || '');
 
+  // ---- R3: the answer grid. html.rv-answer moves the reactor up and opens the
+  // YOU / RAYO / STATUS cards; it lives outside STATES so it stays open for
+  // reading after the voice loop has gone back to idle.
+  let gridTimer = null, thinkAt = 0, brain = '';
+  const holdFor = (t) => Math.max(5000, (t || '').split(' ').length * 420);
+  function status(word, aux) {
+    const s = $('vg-state'), b = $('vg-brain');
+    if (s) s.textContent = word;
+    if (b) b.textContent = aux != null ? aux : brain;
+  }
+  function openGrid(text, hold) {
+    const you = $('vg-you'), ray = $('vg-rayo');
+    if (you) you.textContent = lastHeard ? `“${lastHeard}”` : '—';
+    if (ray) ray.textContent = text || '';
+    root.classList.add('rv-answer');
+    clearTimeout(gridTimer);
+    if (hold) gridTimer = setTimeout(closeGrid, hold);
+  }
+  function closeGrid() { clearTimeout(gridTimer); root.classList.remove('rv-answer'); }
+  function done(text) {
+    const secs = thinkAt ? ` · ${((performance.now() - thinkAt) / 1000).toFixed(1)}s` : '';
+    openGrid(text, holdFor(text));
+    status('DONE', brain + secs);
+  }
+
   const on = {
     starting() { setState('rv-on'); label('VOICE WAKING'); },
     armed()    { setState('rv-on', 'rv-armed'); label('VOICE ARMED'); level(0);
                  caption('', 'say “rayo”', false, 3500); },
-    listening(){ setState('rv-on', 'rv-armed', 'rv-listening'); label('VOICE · LISTENING');
-                 lastHeard = ''; caption('', 'listening…', false, 0); },
+    listening(){ setState('rv-on', 'rv-armed', 'rv-listening'); label('VOICE · LISTENING');   // the reactor leans in
+                 closeGrid(); lastHeard = ''; caption('', 'listening…', false, 0); },
     level(v)   { level(v); },
     heard(t)   { lastHeard = t || ''; },
-    thinking() { setState('rv-on', 'rv-armed', 'rv-thinking'); label('VOICE · THINKING'); level(0);     // same word whichever brain answers
+    thinking(b){ setState('rv-on', 'rv-armed', 'rv-thinking'); label('VOICE · THINKING'); level(0);     // the rings tilt flat
+                 closeGrid(); brain = b || 'local brain'; thinkAt = performance.now(); status('THINKING');
                  caption(lastHeard, 'thinking…', false, 0); },
-    say(t)     { caption(lastHeard, t, false, 0, false, true); },               // answer streaming in
-    answer(t)  { caption(lastHeard, t, false, Math.max(5000, (t || '').split(' ').length * 420), false, true); },
+    say(t)     { caption(lastHeard, t, false, 0, false, true);                  // answer streaming in:
+                 openGrid(t, 0); status('ANSWERING'); },                        // the reactor rises, the grid opens
+    speaking() { setState('rv-on', 'rv-armed', 'rv-speaking'); label('VOICE · SPEAKING');
+                 if (root.classList.contains('rv-answer')) status('SPEAKING', ($('vg-brain') || {}).textContent); },   // keep "brain · time"
+    answer(t)  { caption(lastHeard, t, false, holdFor(t), false, true); done(t); },
     ask(q)     { setState('rv-on', 'rv-armed', 'rv-listening'); label('VOICE · ASKING');   // Rayo needs a detail
-                 caption(q, 'listening…', false, 0, true); },
-    result(m)  { const long = (m || '').length > 46;                 // long replies wrap instead of running off-screen
-                 caption(lastHeard, m, isErr(m), long ? Math.max(4500, m.split(' ').length * 420) : 3200, false, long); },
-    idle()     { setState('rv-on', 'rv-armed'); label('VOICE ARMED'); level(0); },
-    error(m)   { setState('rv-on', 'rv-error'); label('VOICE ERROR'); caption('', m, true, 7000); },
-    off()      { STATES.forEach((c) => root.classList.remove(c)); level(0); demo = false; },
+                 closeGrid(); caption(q, 'listening…', false, 0, true); },
+    result(m)  { const long = (m || '').length > 46;                 // long replies get the grid; short ones stay a subtitle
+                 caption(lastHeard, m, isErr(m), long ? Math.max(4500, m.split(' ').length * 420) : 3200, false, long);
+                 if (long) done(m); else closeGrid(); },
+    idle()     { setState('rv-on', 'rv-armed'); label('VOICE ARMED'); level(0); },   // a grid still being read stays open
+    error(m)   { setState('rv-on', 'rv-error'); label('VOICE ERROR'); closeGrid(); caption('', m, true, 7000); },
+    off()      { STATES.forEach((c) => root.classList.remove(c)); closeGrid(); level(0); demo = false; },
     do(cmd)    {                        // HUD-side voice commands
       if (cmd === 'theme' && window.RayoTheme) window.RayoTheme.cycle();
       else if (cmd === 'bench' && window.RayoControl) window.RayoControl.openBench();
@@ -76,11 +106,14 @@
     at(10300, 'idle');
     // then a question for the brain (the local LLM)
     at(12500, 'listening'); [.4, .8, .6, .3].forEach((v, i) => at(12800 + i * 250, 'level', v));
-    at(13900, 'level', 0); at(14000, 'heard', 'why is the sky blue'); at(14050, 'thinking');
+    at(13900, 'level', 0); at(14000, 'heard', 'why is the sky blue'); at(14050, 'thinking', 'local brain');
+    // the rings stay tilted while it thinks, then the answer streams into the grid and is spoken
     const reply = 'Sunlight scatters off the air, and blue light scatters the most, so the whole sky glows blue.';
-    reply.split(' ').forEach((w, i, a) => at(15000 + i * 110, 'say', a.slice(0, i + 1).join(' ')));
-    at(15000 + reply.split(' ').length * 110, 'answer', reply);
-    at(17800, 'idle'); at(25000, 'off');
+    const words = reply.split(' '), sayAt = 16200, end = sayAt + words.length * 110;
+    words.forEach((w, i, a) => at(sayAt + i * 110, 'say', a.slice(0, i + 1).join(' ')));
+    at(end, 'answer', reply); at(end + 100, 'speaking');
+    [.5, .8, .4, .7, .9, .3, .6, .8, .5, .2].forEach((v, i) => at(end + 200 + i * 250, 'level', v));
+    at(end + 2800, 'level', 0); at(end + 2900, 'idle'); at(end + 9000, 'off');
   }
 
   window.RayoVoice = {
