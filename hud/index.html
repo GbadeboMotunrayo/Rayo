@@ -888,6 +888,74 @@ html.rv-answer .vg-card{opacity:1;transform:none;visibility:visible;
   transition:translate var(--dur-snappy) var(--spring-snappy),opacity .15s var(--ease-exit)}
 .launch.hov .hl{opacity:1;transition:translate var(--dur-snappy) var(--spring-snappy),opacity .2s ease-out}
 @media (prefers-reduced-motion:reduce){.launch .hl{transition:opacity .15s}}
+
+/* ============================================================
+   R8 — HONEST, CALM, CONNECTED (Nov 2026)
+   ============================================================ */
+/* status words are real now (stats.py): ice when fine, gold to note, red when wrong */
+.topstrip b.note{color:var(--gold)}
+.topstrip b.bad{color:var(--red)}
+.bench .diag .r .v.note{color:var(--gold)} .bench .diag .r .v.bad{color:#ff9a9d}
+
+/* small labels: up a size, and lifted off --muted towards --paper so they read
+   from the chair (muted alone is 4.0:1 on the backdrop; this mix is ~6:1).
+   Colours are derived from each theme's own tokens, so every theme keeps its look. */
+:root{--label:color-mix(in srgb,var(--muted) 62%,var(--paper))}
+.topstrip{font-size:12.5px}
+.deck .sec,.tele-sec{font-size:12px;color:var(--label)}
+.vrow .t .k,.cap .row,.netblk .row .k,.cap .row .k{font-size:12.5px;color:var(--label)}
+.netblk .row{font-size:13px}
+.clock .face .w,.worb .face .x,.worb .face .loc{font-size:10px;color:var(--label)}
+.worb .face .c{font-size:10px}
+.baseline .sub{font-size:12px;color:var(--label)}
+.status .r{font-size:13px;color:var(--ice)}
+.launch .it{font-size:14px}
+.reactor .cardinal{font-size:12px}
+#fan-gauge .g-unit,#fan-gauge .g-lbl{fill:var(--label)}
+
+/* MG.OFFICE: right column, under the launchers, right-aligned like them */
+.office{right:100px;top:600px;width:280px;text-align:right;cursor:pointer;border-radius:12px;
+  padding:10px 0 10px 14px;scale:1;transition:scale var(--ds,var(--dur-snappy)) var(--es,var(--spring-snappy))}
+.office .sec::before{display:none}
+.office .sec::after{content:"";display:inline-block;width:12px;height:2px;border-radius:2px;margin-left:8px;
+  background:var(--ice);box-shadow:0 0 8px rgb(var(--ice-rgb)/.6);vertical-align:middle}
+.of-big{display:flex;align-items:baseline;justify-content:flex-end;gap:10px;margin:10px 0 4px}
+.of-n{font-size:44px;font-weight:800;line-height:1;color:var(--paper);letter-spacing:-1px;font-variant-numeric:tabular-nums}
+.of-k{font-size:12px;letter-spacing:2px;color:var(--label)}
+.office.need .of-n,.office.need .of-k{color:var(--gold)}
+.office.need .of-n{text-shadow:0 0 18px rgba(201,162,75,.45)}
+.of-top{font-size:12.5px;line-height:1.45;color:var(--paper);margin-bottom:6px;min-height:0}
+.of-top:empty{display:none}
+.of-top small{display:block;font-size:11px;letter-spacing:1px;color:var(--label);margin-top:2px}
+.office .row{display:flex;justify-content:space-between;gap:16px;font-size:12.5px;margin:7px 0}
+.office .row .k{color:var(--label);letter-spacing:.5px} .office .row .v{color:var(--ice-bright)}
+.office.off .of-n{font-size:20px;color:var(--label)}
+.office.off .row{display:none}
+@media (hover:hover) and (pointer:fine){ .office:hover .sec{color:var(--ice-bright)} }
+.office:active{scale:.97;--ds:.08s;--es:var(--ease-exit)}
+
+/* IDLE BRIEF: quiet text under the reactor; gives way to voice (subtitle, cards) */
+.brief{position:absolute;left:50%;top:850px;transform:translateX(-50%);z-index:3;pointer-events:none;
+  display:flex;flex-direction:column;gap:9px;align-items:flex-start;font-family:var(--font-mono);white-space:nowrap;
+  opacity:1;transition:opacity .3s ease-out}
+.b-row{display:flex;gap:14px;align-items:baseline}
+.b-row[hidden]{display:none}
+.b-k{font-size:11px;letter-spacing:3px;color:var(--ice);min-width:44px;text-align:right}
+.b-v{font-size:15px;color:var(--paper);letter-spacing:.3px;max-width:620px;overflow:hidden;text-overflow:ellipsis}
+.b-v small{font-size:12px;color:var(--label);margin-left:10px}
+html.rv-listening .brief,html.rv-thinking .brief,html.rv-speaking .brief,html.rv-answer .brief,
+.stage:has(.vcap.show) .brief{opacity:0;transition:opacity var(--dur-exit) var(--ease-exit)}
+
+/* CALM: after a quiet minute every loop stops where it is and only the core
+   breathes, slowly, on a 2 fps beat. In the overlay's software renderer any
+   running animation repaints the whole window, so freezing just the rings saved
+   nothing (measured); the frame rate is the lever (docs/MOTION.md §6). Anything
+   happening (pointer, a click, voice, the desktop shown again, a status change)
+   wakes it. Paused at whatever step it reached, so nothing jumps. */
+html.rayo-calm *,html.rayo-calm *::before,html.rayo-calm *::after{animation-play-state:paused!important}
+html.rayo-calm .orb .core{animation:calmBreath 6s steps(6) infinite!important;animation-play-state:running!important}
+@keyframes calmBreath{0%,100%{opacity:.86}50%{opacity:1}}
+html.rayo-idle.rayo-calm .orb .core{animation-play-state:paused!important}
 </style>
 <script src="core/obs-fix.js"></script>
 </head>
@@ -898,9 +966,9 @@ html.rv-answer .vg-card{opacity:1;transform:none;visibility:visible;
   <!-- TOP STATUS STRIP -->
   <div class="cluster topstrip">
     <span><span class="live" id="data-src">LIVE</span>&nbsp; RAYO</span>
-    <span>SYS <b>NOMINAL</b></span>
-    <span>SECURE LINK <b>ACTIVE</b></span>
-    <span>THREAT <b>NONE</b></span>
+    <span>SYS <b id="st-sys">—</b></span>
+    <span>SECURE LINK <b id="st-link">—</b></span>
+    <span>THREAT <b id="st-threat">—</b></span>
     <span class="vstate" id="vstate">VOICE ARMED</span>
   </div>
 
@@ -1005,6 +1073,21 @@ html.rv-answer .vg-card{opacity:1;transform:none;visibility:visible;
     <div class="it" data-act="lock">LOCK</div>
   </div>
 
+  <!-- MG OFFICE (right, under the launchers): the staff feed via the mgoffice tunnel -->
+  <div class="cluster office" id="office" data-act="office" role="button" tabindex="0" title="Open the Office">
+    <div class="sec">MG.OFFICE</div>
+    <div class="of-big"><span class="of-n" id="of-n">--</span><span class="of-k" id="of-k">NEEDS YOU</span></div>
+    <div class="of-top" id="of-top"></div>
+    <div class="row"><span class="k">STAFF ON DUTY</span><span class="v" id="of-on">--</span></div>
+    <div class="row"><span class="k">DONE · 24H</span><span class="v" id="of-done">--</span></div>
+  </div>
+
+  <!-- IDLE BRIEF (under the reactor): what's next and what Rayo last did -->
+  <div class="brief" id="brief">
+    <div class="b-row" id="b-next" hidden><span class="b-k">NEXT</span><span class="b-v" id="b-next-v"></span></div>
+    <div class="b-row" id="b-last" hidden><span class="b-k">LAST</span><span class="b-v" id="b-last-v"></span></div>
+  </div>
+
   <!-- BOTTOM-LEFT network -->
   <div class="cluster netblk">
     <div class="sec">LINK.NET</div>
@@ -1053,8 +1136,8 @@ html.rv-answer .vg-card{opacity:1;transform:none;visibility:visible;
     <div class="r"><span class="k">UPLINK</span><span class="v ok" id="b-ssid">SECURE</span></div>
     <div class="r"><span class="k">DATA / MONTH</span><span class="v" id="b-data">--</span></div>
     <div class="sec">INTEGRITY</div>
-    <div class="r"><span class="k">FRAME</span><span class="v ok">100%</span></div>
-    <div class="r"><span class="k">DIAGNOSTICS</span><span class="v ok">PASS &middot; 0 FAULTS</span></div>
+    <div class="r"><span class="k">SECURE LINK</span><span class="v" id="b-link">--</span></div>
+    <div class="r"><span class="k">SECURITY AUDIT</span><span class="v" id="b-audit">--</span></div>
   </div>
 
   <div class="stage2">
@@ -1088,7 +1171,7 @@ html.rv-answer .vg-card{opacity:1;transform:none;visibility:visible;
 
   <div class="cli">
     <div><span class="p">rayo&gt;</span> monitor --live</div>
-    <div style="color:#7fe3b0">&#10003; all systems nominal &middot; 0 faults</div>
+    <div id="b-cli-res">&nbsp;</div>
     <div><span class="p">rayo&gt;</span> streaming telemetry<span class="cur"></span></div>
   </div>
 </div>
@@ -1097,5 +1180,6 @@ html.rv-answer .vg-card{opacity:1;transform:none;visibility:visible;
 <script src="core/hud.js"></script>
 <script src="core/voice.js"></script>
 <script src="core/control.js"></script>
+<script src="core/calm.js"></script>
 </body>
 </html>

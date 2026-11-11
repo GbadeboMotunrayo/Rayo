@@ -13,10 +13,19 @@ HERE="$(cd "$(dirname "$0")/.." && pwd)"
 
 h "1. Services reachable from your network (not just this PC)"
 exposed="$(ss -tlnpH 2>/dev/null | awk '{print $4"|"$6}' | grep -vE '^(127\.|\[::1\]|localhost)' | awk -F'|' '{p=$1; sub(/.*:/,"",p); if(!(p in seen)){seen[p]=1; print}}' || true)"
+# With ufw on (deny incoming) a listening port is blocked, unless you added an allow
+# rule (the rules are root-only, so: sudo ufw status). Docker-published ports
+# skip ufw entirely, so those stay a problem whatever the firewall says.
+fw=0; grep -qs '^ENABLED=yes' /etc/ufw/ufw.conf && fw=1
+dports=" $( (docker ps --format '{{.Ports}}' 2>/dev/null || true) | grep -oE '(0\.0\.0\.0|\[::\]):[0-9]+' | sed 's/.*://' | sort -u | tr '\n' ' ')"
 if [ -z "$exposed" ]; then ok "no TCP service listens on a network address"; else
   while IFS='|' read -r addr proc; do
     port="${addr##*:}"; name="$(echo "$proc" | grep -o '"[^"]*"' | head -1 | tr -d '"')"
-    bad "port $port is open to the network${name:+ ($name)}: anyone on your Wi-Fi can try it"
+    if [ "$fw" = 1 ] && [[ "$dports" != *" $port "* ]]; then
+      warn "port $port listens on the network${name:+ ($name)}, but the firewall blocks it (unless you allowed it: sudo ufw status). Better: make it listen on 127.0.0.1 only"
+    else
+      bad "port $port is open to the network${name:+ ($name)}: anyone on your Wi-Fi can try it"
+    fi
   done <<< "$exposed"; fi
 udp="$(ss -ulnpH 2>/dev/null | awk '{print $5}' | grep -vE '^(127\.|\[::1\]|\[?fe80)' | grep -cvE ':(5353|3702|68|323)$' || true)"
 [ "${udp:-0}" -gt 0 ] && warn "$udp UDP listener(s) on network addresses (mDNS/discovery are normal; check with: ss -ulnp)"

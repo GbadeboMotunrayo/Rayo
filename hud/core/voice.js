@@ -77,7 +77,8 @@
     answer(t)  { caption(lastHeard, t, false, holdFor(t), false, true); done(t); },
     ask(q)     { setState('rv-on', 'rv-armed', 'rv-listening'); label('VOICE · ASKING');   // Rayo needs a detail
                  closeGrid(); caption(q, 'listening…', false, 0, true); },
-    result(m)  { const long = (m || '').length > 46;                 // long replies get the grid; short ones stay a subtitle
+    result(m)  { if (!demo && m && !isErr(m)) window.dispatchEvent(new CustomEvent('rayo:action', { detail: { said: m } }));
+                 const long = (m || '').length > 46;                 // long replies get the grid; short ones stay a subtitle
                  caption(lastHeard, m, isErr(m), long ? Math.max(4500, m.split(' ').length * 420) : 3200, false, long);
                  if (long) done(m); else closeGrid(); },
     idle()     { setState('rv-on', 'rv-armed'); label('VOICE ARMED'); level(0); },   // a grid still being read stays open

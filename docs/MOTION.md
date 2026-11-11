@@ -70,7 +70,20 @@ Looping, decorative animation (rings, orb breathing, blade glow, blinking dots, 
   - Animation frame rate is the main lever. Removing any single layer of the reactor saves only 5–20%.
   - GPU compositing (`WEBKIT_DISABLE_DMABUF_RENDERER` unset) reached only about 14 fps at a similar total cost, and it has frozen the animation before, so it stays off.
 
-## 7. Checking a change
+## 7. Calm mode
+
+After a quiet minute (`core/calm.js`) the page adds `html.rayo-calm`: **every loop pauses where it is**, and only the core keeps breathing, as an opacity change on a 2 fps beat (`steps(6)` over a 3 s segment).
+
+- **Why everything, not just the rings.** In the software renderer any running loop repaints the whole window. Pausing only the rings measured 40% → 42% of a core, so no saving. Pausing everything except a 2 fps breath measured **42% → 18%**.
+- **What wakes it** for another minute:
+  - the pointer, a click or a key
+  - a voice state change
+  - the desktop shown again after being covered
+  - an action
+  - a status word changing (`rayo:wake` from `hud.js`)
+- **When it never settles:** mid-conversation, or while the menu, power bar, Bench or countdown is open.
+
+## 8. Checking a change
 
 1. `./run.sh` and open `http://localhost:8099`. Click the hub once, twice and three times. Press **Esc** to cancel the countdown.
 2. Check all four themes (`?theme=rayo|cyberpunk|cyborg|tron`).

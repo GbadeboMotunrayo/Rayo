@@ -633,8 +633,33 @@ def _open_office():
                 return "I couldn't reach the office server"
             if r.returncode:
                 return "I couldn't reach the office server"
+    if tunnel and port and not office.get("key"):
+        msg = _office_fetch_key(tunnel)
+        if msg:
+            return msg
     for url in office["urls"]:
         _open_path(os.path.expanduser(url)) if url.startswith(("/", "~")) else _popen(["xdg-open", url])
+    return None
+
+
+def _office_fetch_key(tunnel):
+    """First connect: read the Office key (MGH_HUD_TOKEN of mgh-hud.service) from the
+    server over your own SSH access and keep it in Rayo's private config (file 600).
+    It is never printed or logged. ClearAllForwardings: the tunnel already holds the ports."""
+    import config
+    try:
+        r = subprocess.run(
+            ["ssh", "-o", "BatchMode=yes", "-o", "ClearAllForwardings=yes", "-o", "ConnectTimeout=15", tunnel,
+             "systemctl show mgh-hud -p Environment --value | tr ' ' '\\n' | sed -n 's/^MGH_HUD_TOKEN=//p'"],
+            capture_output=True, text=True, timeout=40)
+    except (OSError, subprocess.TimeoutExpired):
+        return "I couldn't reach the office server to connect"
+    key = (r.stdout or "").strip().splitlines()[0] if (r.stdout or "").strip() else ""
+    if r.returncode or not re.fullmatch(r"[A-Za-z0-9_\-.~+/=]{16,200}", key):
+        return "I reached the server but couldn't read the office key"
+    config.update("office", {"key": key})
+    _popen(["notify-send", "-a", "Rayo", "Connected to the Office",
+            "You'll get a notification when something needs you."])
     return None
 
 

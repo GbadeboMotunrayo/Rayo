@@ -94,15 +94,19 @@
     const unit = svgEl('text', { class: 'g-unit', x: cx, y: 168 }); unit.textContent = 'RPM';
     const lbl = svgEl('text', { class: 'g-lbl', x: cx, y: 190 }); lbl.textContent = 'CPU FAN';
     svg.append(val, unit, lbl);
-    gauge = { fill, needle, nglow, glow1, glow2, val, lbl };
+    gauge = { fill, needle, nglow, glow1, glow2, val, lbl, unit };
   }
-  function updateGauge(rpm, maxRpm, label) {
+  // Colour follows the CPU temperature, which is what matters, not how close the
+  // fan is to its maximum: this laptop's fan sits near max at ordinary loads, so
+  // the old rule kept the gauge red all day. The arc still shows the real RPM.
+  const heatColor = (t) => t >= 90 ? 'var(--red)' : t >= 80 ? 'var(--gold)' : 'var(--ice)';
+  function updateGauge(rpm, maxRpm, label, temp) {
     if (!gauge) return;
     const mx = maxRpm > 0 ? maxRpm : 8100;
     const frac = clamp(rpm / mx, 0, 1);
     const { START, SWEEP, cx, cy, r, stroke } = G;
     const ang = START + frac * SWEEP;
-    const col = fanColor(frac);
+    const col = temp != null ? heatColor(temp) : fanColor(frac);
     const dNow = arcPath(cx, cy, r, START, Math.max(START + 0.001, ang));
     gauge.fill.setAttribute('d', dNow);
     gauge.fill.setAttribute('stroke', col);
@@ -116,6 +120,7 @@
     gauge.nglow.setAttribute('y2', tip.y.toFixed(2));
     gauge.nglow.setAttribute('stroke', col);
     gauge.val.textContent = Math.round(rpm || 0);
+    if (gauge.unit) gauge.unit.textContent = temp != null ? `RPM · ${Math.round(temp)}°C` : 'RPM';
     if (label) gauge.lbl.textContent = String(label).toUpperCase();
   }
   buildGauge();
@@ -286,12 +291,85 @@
     }
 
     // fan speedometer
-    updateGauge(d.fan, d.fan_max, d.fan_label);
+    updateGauge(d.fan, d.fan_max, d.fan_label, d.cpu_temp);
+
+    renderStatus(d); renderOffice(d.office); renderNext(d.next_event);
 
     // hub reacts to CPU load by pulsing faster/brighter
     const pulse = (3 - cpu / 100 * 1.6).toFixed(2) + 's';
     const orb = document.querySelector('.orb .core'); if (orb) orb.style.animationDuration = pulse;
     const blades = document.querySelector('.blades'); if (blades) blades.style.animationDuration = pulse;
+  }
+
+  // ---- top strip + Bench: real status words (stats.py), not decoration --------
+  const word = (id, text, cls, title) => {
+    const el = $(id); if (!el) return;
+    if (el.textContent !== text) el.textContent = text;
+    el.classList.toggle('note', cls === 'note'); el.classList.toggle('bad', cls === 'bad'); el.classList.toggle('ok', cls === 'ok');
+    if (title != null) el.title = title;
+    if (el.dataset.last !== undefined && el.dataset.last !== text) window.dispatchEvent(new CustomEvent('rayo:wake'));
+    el.dataset.last = text;
+  };
+  function renderStatus(d) {
+    if (d.mock) { word('st-sys', 'SIM', 'note'); word('st-link', 'SIM', 'note'); word('st-threat', 'SIM', 'note'); return; }
+    const sys = d.sys_state || '—';
+    word('st-sys', sys, sys === 'NOMINAL' ? '' : sys === 'HOT' ? 'bad' : 'note');
+    const link = d.link || '—';
+    word('st-link', link, link === 'ACTIVE' ? '' : link === 'OFFLINE' ? 'bad' : 'note',
+      link === 'CLOSED' ? 'The mgoffice tunnel is closed. Say "open office".' : '');
+    const t = d.threat;
+    const threat = !t ? 'UNCHECKED' : t.bad ? `${t.bad} OPEN` : t.warn ? 'LOW' : 'NONE';
+    word('st-threat', threat, !t ? 'note' : t.bad ? 'bad' : t.warn ? 'note' : '',
+      t ? (t.bad ? `${t.bad} problem(s), ${t.warn} warning(s). First: ${t.first}. Details: ./security/security-check.sh` : `${t.warn} warning(s). Details: ./security/security-check.sh`) : '');
+    if ($('b-link')) word('b-link', link, link === 'ACTIVE' ? 'ok' : 'note');
+    if ($('b-audit')) word('b-audit', t ? `${t.bad} FAULTS · ${t.warn} WARN` : 'NOT RUN', t && !t.bad ? (t.warn ? 'note' : 'ok') : 'bad');
+    const cli = $('b-cli-res');
+    if (cli) {
+      const txt = !t ? '… security audit not run yet' : t.bad ? `✗ ${t.bad} fault(s): ${t.first}` : t.warn ? `⚠ ${t.warn} warning(s), no faults` : '✓ all systems nominal · 0 faults';
+      if (cli.textContent !== txt) { cli.textContent = txt; cli.style.color = !t || t.bad ? '#ff9a9d' : t.warn ? 'var(--gold)' : '#7fe3b0'; }
+    }
+  }
+
+  // ---- MG.OFFICE card -------------------------------------------------------
+  function renderOffice(o) {
+    const box = $('office'); if (!box) return;
+    if (!o) { box.hidden = true; return; }
+    box.hidden = false;
+    const ok = o.state === 'ok';
+    box.classList.toggle('off', !ok);
+    box.classList.toggle('need', ok && o.need > 0);
+    const MSG = { closed: ['LINK CLOSED', 'tap to connect'], nokey: ['NOT CONNECTED', 'tap to connect'],
+                  badkey: ['KEY REFUSED', 'check office.key'], error: ['NO ANSWER', 'the Office did not reply'] };
+    if (!ok) {
+      const [a, b] = MSG[o.state] || MSG.error;
+      $('of-n').textContent = a; $('of-k').textContent = '';
+      $('of-top').innerHTML = `<small>${b}</small>`;
+      return;
+    }
+    const prev = Number($('of-n').dataset.n || 0);
+    $('of-n').textContent = o.need; $('of-n').dataset.n = o.need;
+    $('of-k').textContent = o.need === 1 ? 'NEEDS YOU' : o.need ? 'NEED YOU' : 'ALL CLEAR';
+    const top = o.top ? `${esc(o.top.title)}<small>${esc(o.top.who || '')}</small>` : '';
+    if ($('of-top').innerHTML !== top) $('of-top').innerHTML = top;
+    $('of-on').textContent = `${o.on} / ${o.of}`;
+    $('of-done').textContent = o.done_24h;
+    if (o.need > prev) window.dispatchEvent(new CustomEvent('rayo:wake'));
+  }
+  const esc = (x) => String(x).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+  // ---- brief: NEXT (calendar) -------------------------------------------------
+  function renderNext(ev) {
+    const row = $('b-next'); if (!row) return;
+    if (!ev) { row.hidden = true; return; }
+    const at = new Date(ev.at), now = new Date();
+    const p = (x) => String(x).padStart(2, '0');
+    const today = at.toDateString() === now.toDateString();
+    const when = ev.allday ? (today ? 'TODAY' : 'TOMORROW') : `${today ? '' : 'TOMORROW '}${p(at.getHours())}:${p(at.getMinutes())}`;
+    const mins = Math.round((at - now) / 60000);
+    const soon = !ev.allday && mins >= 0 && mins <= 90 ? `in ${mins} min` : '';
+    const html = `${esc(when)} · ${esc(ev.title)}${soon ? `<small>${soon}</small>` : ''}`;
+    if ($('b-next-v').innerHTML !== html) $('b-next-v').innerHTML = html;
+    row.hidden = false;
   }
 
   function clock() {

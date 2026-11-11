@@ -30,7 +30,7 @@ import gi
 gi.require_version("Gtk", "3.0")
 gi.require_version("WebKit2", "4.1")
 gi.require_version("Gdk", "3.0")
-from gi.repository import Gtk, WebKit2, Gdk, GLib
+from gi.repository import Gtk, WebKit2, Gdk, GLib, Gio
 import cairo
 # Register pycairo's types (incl. Region) with GObject-Introspection so
 # Gdk.Window.input_shape_combine_region() accepts a cairo.Region.
@@ -251,6 +251,12 @@ class Overlay(Gtk.Window):
         self.add_events(Gdk.EventMask.VISIBILITY_NOTIFY_MASK)
         self.connect("visibility-notify-event", self._on_visibility)
 
+        # --- idle Bench: after N seconds with no keyboard/mouse, Bench rises
+        # over your windows like a screensaver; any input sends it back ---
+        self._idle_bench = False
+        self._idle = None
+        self.web.connect("load-changed", self._on_load_for_idle)
+
     def _on_visibility(self, _w, event):
         # FULLY_OBSCURED → nothing of the HUD is visible → freeze it.
         # UNOBSCURED / PARTIALLY_OBSCURED → some of it shows → keep it alive.
@@ -274,6 +280,87 @@ class Overlay(Gtk.Window):
             self.web.run_javascript(js, None, None, None)
         except Exception:
             pass
+
+    # ---- idle Bench ---------------------------------------------------------
+    # GNOME's own idle monitor (org.gnome.Mutter.IdleMonitor) fires a watch after
+    # N ms without input, and a one-shot "user active" watch on the next input,
+    # so nothing polls. Setting: {"bench": {"idle_seconds": 60}} in
+    # ~/.config/rayo/config.json (0 = off). Skipped while an app inhibits idle
+    # (a video player, a presentation), so Bench never covers what you watch.
+    def _on_load_for_idle(self, _web, event):
+        if event == WebKit2.LoadEvent.FINISHED and self._idle is None:
+            self._setup_idle_bench()
+
+    def _setup_idle_bench(self):
+        secs = 60
+        try:
+            with open(os.path.expanduser("~/.config/rayo/config.json")) as f:
+                secs = int(_json.load(f).get("bench", {}).get("idle_seconds", 60))
+        except Exception:
+            pass
+        if secs <= 0:
+            self._idle = False
+            return
+        try:
+            self._idle = Gio.DBusProxy.new_for_bus_sync(
+                Gio.BusType.SESSION, Gio.DBusProxyFlags.DO_NOT_LOAD_PROPERTIES, None,
+                "org.gnome.Mutter.IdleMonitor", "/org/gnome/Mutter/IdleMonitor/Core",
+                "org.gnome.Mutter.IdleMonitor", None)
+            self._idle.connect("g-signal", self._on_idle_signal)
+            self._idle_watch = self._idle.call_sync(
+                "AddIdleWatch", GLib.Variant("(t)", (secs * 1000,)), Gio.DBusCallFlags.NONE, -1, None)[0]
+            self._active_watch = None
+            print(f"[rayo] idle Bench after {secs}s", flush=True)
+        except Exception as e:
+            self._idle = False
+            print(f"[rayo] idle Bench unavailable (no GNOME idle monitor): {e}", file=sys.stderr)
+
+    def _idle_inhibited(self):
+        try:
+            sm = Gio.DBusProxy.new_for_bus_sync(
+                Gio.BusType.SESSION, Gio.DBusProxyFlags.DO_NOT_LOAD_PROPERTIES, None,
+                "org.gnome.SessionManager", "/org/gnome/SessionManager", "org.gnome.SessionManager", None)
+            return bool(sm.call_sync("IsInhibited", GLib.Variant("(u)", (8,)), Gio.DBusCallFlags.NONE, -1, None)[0])
+        except Exception:
+            return False
+
+    def _on_idle_signal(self, _proxy, _sender, signal, params):
+        if signal != "WatchFired":
+            return
+        wid = params[0]
+        if wid == self._idle_watch and not self._idle_bench:
+            if self._idle_inhibited():
+                return
+            self._show_idle_bench()
+        elif wid == self._active_watch:
+            self._active_watch = None
+            self._hide_idle_bench()
+
+    def _show_idle_bench(self):
+        self._idle_bench = True
+        self.set_keep_below(False)
+        self.set_keep_above(True)            # over your windows, like a screensaver
+        self._set_paused(False)
+        try:
+            self.web.run_javascript("window.RayoControl && window.RayoControl.openBench()", None, None, None)
+            self._active_watch = self._idle.call_sync(
+                "AddUserActiveWatch", None, Gio.DBusCallFlags.NONE, -1, None)[0]
+            print("[rayo] idle: Bench up", flush=True)
+        except Exception as e:
+            print(f"[rayo] idle Bench: {e}", file=sys.stderr)
+            self._hide_idle_bench()
+
+    def _hide_idle_bench(self):
+        if not self._idle_bench:
+            return
+        self._idle_bench = False
+        try:
+            self.web.run_javascript("window.RayoControl && window.RayoControl.closeBench()", None, None, None)
+        except Exception:
+            pass
+        self.set_keep_above(False)
+        self.set_keep_below(True)            # back behind your windows
+        print("[rayo] active: Bench down", flush=True)
 
     def _on_policy(self, web, decision, dtype):
         """Only our own origin may be loaded; links, redirects and new windows elsewhere are refused."""
@@ -302,6 +389,18 @@ class Overlay(Gtk.Window):
             return
         if action == "voice":
             self._toggle_voice()
+            return
+        if action == "office":
+            # same as saying "open office": bring up the mgoffice tunnel if it's
+            # closed, then open the Office. ssh can take seconds, so off the GTK thread.
+            def _office():
+                try:
+                    import commands
+                    msg = commands._open_office()
+                    print(f"[rayo] action: office{' -> ' + msg if msg else ''}", flush=True)
+                except Exception as e:
+                    print(f"[rayo] action office failed: {e}", file=sys.stderr)
+            threading.Thread(target=_office, daemon=True).start()
             return
         candidates = ACTIONS.get(action)
         if not candidates:

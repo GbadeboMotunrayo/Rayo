@@ -7,7 +7,8 @@ Pure standard library — no dependencies, works on any Linux.
 
 Usage:  python3 overlay/stats.py [--interval 1.0] [--out ../hud/stats.json]
 """
-import json, os, time, glob, argparse, shutil, threading, urllib.request
+import json, os, re, time, glob, argparse, shutil, threading, socket, sqlite3, subprocess, urllib.request
+from datetime import datetime, timedelta, timezone
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_OUT = os.path.normpath(os.path.join(HERE, "..", "hud", "stats.json"))
@@ -311,6 +312,225 @@ def boot_ms():
     return int((time.time() - float(read("/proc/uptime", "0").split()[0] or 0)) * 1000)
 
 
+# ---- background checks: each runs on its own slow clock, never in the 1 s tick
+def _every(seconds, fn, store):
+    """Run fn() now and then every `seconds` on a daemon thread; keep its result in store."""
+    def loop():
+        while True:
+            try:
+                store.update(fn() or {})
+            except Exception:
+                pass
+            time.sleep(seconds)
+    threading.Thread(target=loop, daemon=True).start()
+
+
+def _rayo_config():
+    try:
+        with open(os.path.expanduser("~/.config/rayo/config.json")) as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return {}
+
+
+def _port_open(port):
+    try:
+        socket.create_connection(("127.0.0.1", int(port)), timeout=0.6).close()
+        return True
+    except (OSError, ValueError):
+        return False
+
+
+# THREAT: the read-only audit in security/security-check.sh (about 2 s), every 15 min
+_SEC = os.path.normpath(os.path.join(HERE, "..", "security", "security-check.sh"))
+_threat = {}
+def _check_threat():
+    if not os.path.exists(_SEC):
+        return {"threat": None}
+    r = subprocess.run(["nice", "-n", "15", _SEC], capture_output=True, text=True, timeout=120)
+    out = re.sub(r"\x1b\[[0-9;]*m", "", r.stdout)
+    m = re.search(r"Result:\s*(\d+) problem\(s\),\s*(\d+) warning\(s\)", out)
+    if not m:
+        return {"threat": None}
+    first = next((l.strip()[2:] for l in out.splitlines() if l.strip().startswith("✗")), "")
+    return {"threat": {"bad": int(m.group(1)), "warn": int(m.group(2)), "first": first[:90],
+                       "at": int(time.time())}}
+
+
+# OFFICE: the MG Office feed through the mgoffice tunnel, every 30 s. Needs the
+# office key in ~/.config/rayo/config.json → {"office": {"key": "..."}}. The key
+# is only sent to 127.0.0.1 (the tunnel); it never goes into stats.json.
+_office = {}
+def _check_office():
+    o = _rayo_config().get("office") or {}
+    port = int(o.get("port") or 0)
+    if not port:
+        return {"office": None}
+    if not _port_open(port):
+        return {"office": {"state": "closed"}}
+    if not o.get("key"):
+        return {"office": {"state": "nokey"}}
+    req = urllib.request.Request(f"http://127.0.0.1:{port}/api/hud",
+                                 headers={"Authorization": "Bearer " + str(o["key"])})
+    try:
+        d = json.loads(urllib.request.urlopen(req, timeout=8).read())
+    except urllib.error.HTTPError as e:
+        return {"office": {"state": "badkey" if e.code == 401 else "error"}}
+    except Exception:
+        return {"office": {"state": "error"}}
+    gw = [s for s in d.get("staff", []) if s.get("gateway")]
+    need = d.get("attention") or []
+    names = {s.get("id"): s.get("name") for s in d.get("staff", [])}
+    _office_notify(need, gw, names, port)
+    top = need[0] if need else None
+    return {"office": {"state": "ok", "need": len(need),
+                       "on": sum(1 for s in gw if s.get("status") == "active"), "of": len(gw),
+                       "top": ({"title": (top.get("title") or "")[:70], "who": names.get(top.get("assignee"), "")}
+                               if top else None),
+                       "done_24h": (d.get("task_summary") or {}).get("done_24h", 0)}}
+
+
+# Desktop notifications for the Office: something new needs you, or a staff
+# member's gateway goes down / comes back. What has already been announced is
+# kept in ~/.local/share/rayo/office_seen.json, so a restart doesn't repeat it.
+# Quiet while Rayo's alerts are snoozed ("not now"); GNOME's Do Not Disturb
+# hides the banners as usual. Clicking "Open the Office" opens it.
+_SEEN_FILE = os.path.join(_USAGE_DIR, "office_seen.json")
+_ICON = os.path.normpath(os.path.join(HERE, "..", "hud", "favicon.svg"))
+
+def _notify(title, body, url=None, urgent=False):
+    if not shutil.which("notify-send"):
+        return
+    argv = ["notify-send", "-a", "Rayo", "-i", _ICON, "-u", "critical" if urgent else "normal", title, body]
+    if not url:
+        subprocess.Popen(argv, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+        return
+    def wait_click():          # --wait prints the action's name when you click it
+        try:
+            r = subprocess.run(argv[:1] + ["--action=open=Open the Office", "--wait"] + argv[1:],
+                               capture_output=True, text=True, timeout=3600)
+            if r.stdout.strip() == "open":
+                subprocess.Popen(["xdg-open", url], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                                 start_new_session=True)
+        except (OSError, subprocess.TimeoutExpired):
+            pass
+    threading.Thread(target=wait_click, daemon=True).start()
+
+def _office_notify(need, gw, names, port):
+    try:
+        with open(_SEEN_FILE) as f:
+            seen = json.load(f)
+    except (OSError, ValueError):
+        seen = None
+    ids = {t.get("id") for t in need if t.get("id")}
+    off = {s.get("id") for s in gw if s.get("status") != "active"}
+    url = f"http://localhost:{port}"
+    snoozed = time.time() < float((_rayo_config().get("awareness") or {}).get("snooze_until", 0) or 0)
+    if seen is None:           # first time connected: one summary, not a burst
+        n = len(ids)
+        _notify("The Office is connected",
+                f"{n} thing{'s' if n != 1 else ''} need{'s' if n == 1 else ''} you right now." if n else "Nothing needs you right now.",
+                url if n else None)
+    elif not snoozed:
+        for t in need:
+            if t.get("id") and t["id"] not in seen.get("need", []):
+                who = names.get(t.get("assignee"), "Someone")
+                why = (t.get("why") or "").strip()
+                _notify(f"{who} needs you", (t.get("title") or "A task is blocked") + (f"\n{why[:160]}" if why else ""),
+                        url, urgent=True)
+        for sid in off - set(seen.get("off", [])):
+            _notify(f"{names.get(sid, sid)} went offline", "Their gateway on the server is down.", url)
+        for sid in set(seen.get("off", [])) - off:
+            _notify(f"{names.get(sid, sid)} is back online", "Their gateway is running again.")
+    try:
+        os.makedirs(_USAGE_DIR, exist_ok=True)
+        with open(_SEEN_FILE + ".tmp", "w") as f:
+            json.dump({"need": sorted(ids), "off": sorted(off)}, f)
+        os.replace(_SEEN_FILE + ".tmp", _SEEN_FILE)
+    except OSError:
+        pass
+
+
+# NEXT EVENT: the GNOME calendar store (Evolution data server), read straight
+# from its files, every 5 min. Empty until a calendar is added in Settings →
+# Online Accounts. One-off events only: repeating events are skipped for now.
+_cal = {}
+def _ics_when(v):
+    v = v.strip()
+    try:
+        if len(v) == 8:                                       # all-day: YYYYMMDD
+            return datetime.strptime(v, "%Y%m%d").astimezone(), True
+        if v.endswith("Z"):
+            return datetime.strptime(v, "%Y%m%dT%H%M%SZ").replace(tzinfo=timezone.utc).astimezone(), False
+        return datetime.strptime(v[:15], "%Y%m%dT%H%M%S").astimezone(), False
+    except ValueError:
+        return None, False
+
+def _events_from_ics(text):
+    text = re.sub(r"\r?\n[ \t]", "", text)                    # unfold long lines
+    for blk in re.findall(r"BEGIN:VEVENT(.*?)END:VEVENT", text, re.S):
+        if re.search(r"^RRULE", blk, re.M):
+            continue
+        m = re.search(r"^DTSTART[^:\n]*:(.+)$", blk, re.M)
+        t = re.search(r"^SUMMARY[^:\n]*:(.*)$", blk, re.M)
+        if m:
+            when, allday = _ics_when(m.group(1))
+            if when:
+                yield when, allday, (t.group(1).strip() if t else "").replace("\\,", ",")[:60]
+
+def _check_calendar():
+    now = datetime.now().astimezone()
+    soon = []
+    for f in glob.glob(os.path.expanduser("~/.local/share/evolution/calendar/*/calendar.ics")):
+        try:
+            soon += list(_events_from_ics(open(f, encoding="utf-8", errors="ignore").read()))
+        except OSError:
+            pass
+    for db in glob.glob(os.path.expanduser("~/.cache/evolution/calendar/*/cache.db")):
+        try:
+            con = sqlite3.connect(f"file:{db}?mode=ro", uri=True, timeout=1)
+            for (obj,) in con.execute("SELECT ECacheOBJ FROM ECacheObjects"):
+                soon += list(_events_from_ics(obj or ""))
+            con.close()
+        except sqlite3.Error:
+            pass
+    ahead = sorted((e for e in soon if e[0] >= now - timedelta(minutes=10) and e[0] <= now + timedelta(hours=36)),
+                   key=lambda e: e[0])
+    if not ahead:
+        return {"next_event": None}
+    when, allday, title = ahead[0]
+    return {"next_event": {"at": int(when.timestamp() * 1000), "allday": allday, "title": title or "Untitled"}}
+
+
+def start_checks():
+    _every(900, _check_threat, _threat)
+    _every(30, _check_office, _office)
+    _every(300, _check_calendar, _cal)
+
+
+# SYS: one honest word for the machine, from this tick's readings
+def sys_state(cpu, mem, temp, batt, charging):
+    if temp is not None and temp >= 92:
+        return "HOT"
+    if not charging and batt <= 10:
+        return "LOW POWER"
+    if mem >= 92:
+        return "MEMORY FULL"
+    if cpu >= 90:
+        return "UNDER LOAD"
+    return "NOMINAL"
+
+
+def link_state(iface):
+    """SECURE LINK = the mgoffice tunnel to the MG server is up."""
+    if not iface:
+        return "OFFLINE"
+    port = (_rayo_config().get("office") or {}).get("port")
+    if not port:
+        return "NO TUNNEL SET"
+    return "ACTIVE" if _port_open(port) else "CLOSED"
+
+
 def sample():
     cpu = cpu_percent()
     mem_p, mem_u, mem_t = mem_info()
@@ -318,6 +538,7 @@ def sample():
     batt, charging, batt_status, batt_min = battery_info()
     down, up, signal, ssid, iface = net_info()
     fan_rpm, fan_max, fan_label = fan_info()
+    temp = cpu_temp()
     return {
         "cpu": round(cpu, 1), "freq": cpu_freq_ghz(),
         "mem": mem_p, "mem_used": mem_u, "mem_total": mem_t,
@@ -325,7 +546,10 @@ def sample():
         "battery": batt, "charging": charging,
         "batt_status": batt_status, "batt_min": batt_min,
         "fan": fan_rpm, "fan_max": fan_max, "fan_label": fan_label,
-        "cpu_temp": cpu_temp(),
+        "cpu_temp": temp,
+        "sys_state": sys_state(cpu, mem_p, temp, batt, charging),
+        "link": link_state(iface),
+        **_threat, **_office, **_cal,
         "down": down, "up": up, "signal": signal,
         "month_bytes": monthly_usage(iface),
         "ssid": ssid or iface or "—", "iface": iface,
@@ -341,6 +565,7 @@ def main():
     args = ap.parse_args()
     tmp = args.out + ".tmp"
     cpu_percent()  # prime the delta
+    start_checks()
     while True:
         try:
             data = sample()

@@ -103,7 +103,7 @@
   const closeBench = () => { if (bench) { bench.classList.remove('open'); bench.setAttribute('aria-hidden', 'true'); } };
   const toggleBench = () => { if (bench) bench.classList.contains('open') ? closeBench() : openBench(); };
   // exposed so voice commands ("bench mode" / "exit bench") can drive it
-  window.RayoControl = { openBench, closeBench, toggleBench };
+  window.RayoControl = { openBench, closeBench, toggleBench, action: (a) => doAction(a) };
 
   function doAction(act) {
     // THEME cycles the look in-page and keeps the menu open so you can keep
@@ -112,6 +112,7 @@
     closeAll();
     if (act === 'close') return;
     if (act === 'poweroff') { startCountdown(); return; }
+    window.dispatchEvent(new CustomEvent('rayo:action', { detail: { act } }));   // calm.js: wake + "LAST"
     sendAction(act);
   }
 
