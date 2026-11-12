@@ -40,7 +40,7 @@ MAX_TOKENS = 300                                # spoken answers are short
 GROQ_MAX_TOKENS = 700                           # gpt-oss "reasoning" tokens count against the completion budget
 HISTORY_TURNS, HISTORY_TTL = 3, 300
 SYSTEM = (
-    "You are Rayo (Radiant Assistant, Your Oracle), a voice assistant living on {user}'s laptop. Your reply is "
+    "You are Rayo (Ray Across Your Orbit), a voice assistant living on {user}'s laptop. Your reply is "
     "spoken aloud, so answer in one to three short sentences, under 50 words, as plain text: no markdown, no "
     "lists, no emoji. The user's words come from speech recognition and may be slightly misheard; answer what "
     "they most likely meant. Never repeat the question back. If you don't know, say so in one short sentence. "

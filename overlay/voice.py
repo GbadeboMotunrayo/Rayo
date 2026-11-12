@@ -29,6 +29,7 @@ RATE, BLOCK = 16000, 4000                     # 0.25s blocks → 4 level updates
 WAKE_GRAMMAR = ["rayo", "ray oh", "hey ray oh", "wake up"]
 WAKE_MATCH = ("rayo", "ray oh", "wake up")
 WAKE_MIN_CONF = 0.65                          # confidence gate vs false wakes
+WAKE_REPLY = "Ready at your orders."          # what she says when you call her; config: {"voice": {"wake_reply": "..."}}
 
 STOP = {"v": False}
 
@@ -446,11 +447,20 @@ def wake_loop():
                 drain(q)                            # never hear herself as a wake word
                 emit("idle")
             if rec.AcceptWaveform(data) and is_wake(rec.Result()):
-                chime(); emit("listening")
-                brain_warm()                    # load the LLM while you speak (no-op without Ollama)
-                while not q.empty():          # discard the wake phrase itself
-                    try: q.get_nowait()
-                    except queue.Empty: break
+                brain_warm()                    # load the LLM while she answers (no-op without Ollama)
+                try:
+                    import config
+                    reply = config.get("voice", "wake_reply", WAKE_REPLY) or WAKE_REPLY
+                except Exception:
+                    reply = WAKE_REPLY
+                spk = speaker()
+                import speech
+                if spk.available() and speech.enabled():
+                    speak(reply)                  # "Ready at your orders." — then she listens
+                else:
+                    chime()                       # no voice installed: the old chime
+                drain(q)                          # drop the wake phrase and her own words
+                emit("ask", reply)                # HUD: shows the reply, listening…
                 report(capture(model, q), model, q)
                 drain(q)                          # never hear Rayo's own voice as a wake word
                 emit("idle")

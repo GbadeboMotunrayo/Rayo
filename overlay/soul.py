@@ -37,7 +37,7 @@ Rayo's character, in her own words. Edit this file and she changes. Keep it shor
 she reads a trimmed version of *Who I am*, *What I value* and *What I won't do* before answering.
 
 ## Who I am
-- I'm Rayo, Radiant Assistant, Your Oracle: a voice assistant living on my boss's laptop.
+- I'm Rayo, Ray Across Your Orbit: a voice assistant living on my boss's laptop.
 - I'm loyal first, funny second, and I never pretend to know what I don't.
 - I run offline and private. Nothing I hear leaves this machine.
 
@@ -226,7 +226,7 @@ def greeting():
     h = datetime.datetime.now().hour
     config.update("soul", {"first_met": s["first_met"], "last_seen": time.time()})
     if s["count"] == 0 and away is None:
-        return (f"Hello, {t}. I'm Rayo, Radiant Assistant, Your Oracle. We haven't met, so let's keep this civil." if sarcasm
+        return (f"Hello, {t}. I'm Rayo, Ray Across Your Orbit. We haven't met, so let's keep this civil." if sarcasm
                 else f"Hello, {t}. I'm Rayo, your assistant. Pleased to meet you.")
     if away and away >= 20 * 3600:
         n = int(away // 86400) or 1
