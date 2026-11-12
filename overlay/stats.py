@@ -357,6 +357,20 @@ def _check_threat():
                        "at": int(time.time())}}
 
 
+_tunnel_try = {"at": 0.0}
+def _reopen_tunnel(host):
+    if time.time() - _tunnel_try["at"] < 300:
+        return False
+    _tunnel_try["at"] = time.time()
+    try:
+        r = subprocess.run(["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=15", "-N", "-f", host],
+                           capture_output=True, timeout=40, start_new_session=True)
+        time.sleep(1)
+        return r.returncode == 0
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+
+
 # OFFICE: the MG Office feed through the mgoffice tunnel, every 30 s. Needs the
 # office key in ~/.config/rayo/config.json → {"office": {"key": "..."}}. The key
 # is only sent to 127.0.0.1 (the tunnel); it never goes into stats.json.
@@ -367,7 +381,11 @@ def _check_office():
     if not port:
         return {"office": None}
     if not _port_open(port):
-        return {"office": {"state": "closed"}}
+        # Once you've connected (the key is saved), Rayo keeps the tunnel up by
+        # itself, e.g. after a reboot, so notifications keep arriving. At most
+        # one attempt every 5 min; BatchMode, so it never prompts.
+        if not (o.get("key") and o.get("tunnel") and _reopen_tunnel(o["tunnel"]) and _port_open(port)):
+            return {"office": {"state": "closed"}}
     if not o.get("key"):
         return {"office": {"state": "nokey"}}
     req = urllib.request.Request(f"http://127.0.0.1:{port}/api/hud",

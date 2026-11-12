@@ -83,7 +83,27 @@ After a quiet minute (`core/calm.js`) the page adds `html.rayo-calm`: **every lo
   - a status word changing (`rayo:wake` from `hud.js`)
 - **When it never settles:** mid-conversation, or while the menu, power bar, Bench or countdown is open.
 
-## 8. Checking a change
+## 8. The 3D reactor (R7)
+
+`core/reactor3d.js` draws the reactor with three.js (vendored, MIT) in one WebGL canvas the size of the reactor. The CSS rings, ruler, blades and core get `display:none`, and everything else stays CSS.
+
+- **Measured, window process plus web process:**
+  - CSS reactor about 30% of a core, 3D reactor about 26%.
+  - Calm mode with 3D: 14%.
+
+  The GPU draws one small square instead of the CPU repainting several large masked layers.
+- **Frame rate:**
+  - 10 fps for the ambient spin, the shared beat.
+  - 30 fps for about 1.2 s after you act: pointer, press, or voice state.
+  - 0 in calm mode, when covered, or when hidden: the loop stops.
+- **Pointer:** the whole reactor leans towards the pointer.
+- **Thinking and answering:** the rings tip back on the same axis as the CSS version, outer to inner.
+- **Fallbacks:**
+  - No WebGL: `html.r3d` is never set and the CSS reactor stays.
+  - `?r3d=0` forces the CSS reactor.
+  - Reduced motion: one still frame.
+
+## 9. Checking a change
 
 1. `./run.sh` and open `http://localhost:8099`. Click the hub once, twice and three times. Press **Esc** to cancel the countdown.
 2. Check all four themes (`?theme=rayo|cyberpunk|cyborg|tron`).

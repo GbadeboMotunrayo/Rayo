@@ -16,7 +16,7 @@ A free, open-source animated HUD that runs on your wallpaper.</p>
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-78d2ee?style=flat-square" alt="MIT"></a>
-  <img src="https://img.shields.io/badge/deps-0-78d2ee?style=flat-square" alt="Zero dependencies">
+  <img src="https://img.shields.io/badge/deps-1%20vendored-78d2ee?style=flat-square" alt="One vendored dependency: three.js">
   <img src="https://img.shields.io/badge/themes-4-78d2ee?style=flat-square" alt="4 themes">
   <img src="https://img.shields.io/badge/platform-Linux-06080b?style=flat-square" alt="Linux">
 </p>
@@ -27,7 +27,9 @@ fan speedometer, and an interactive control hub. Theme it as Iron Man,
 Cyberpunk, Cyborg, Tron, or build your own hero.
 
 It is plain HTML/CSS/JS (so it can actually *animate*, unlike conky/Rainmeter)
-plus one dependency-free Python file that feeds it real `/proc` data.
+plus one dependency-free Python file that feeds it real `/proc` data. The one
+library is three.js (MIT), vendored in `hud/vendor/three` with no build step,
+for the 3D reactor; without WebGL the CSS reactor takes its place.
 
 ## Try it now, no install
 

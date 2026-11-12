@@ -956,6 +956,91 @@ html.rayo-calm *,html.rayo-calm *::before,html.rayo-calm *::after{animation-play
 html.rayo-calm .orb .core{animation:calmBreath 6s steps(6) infinite!important;animation-play-state:running!important}
 @keyframes calmBreath{0%,100%{opacity:.86}50%{opacity:1}}
 html.rayo-idle.rayo-calm .orb .core{animation-play-state:paused!important}
+
+/* ============================================================
+   R6 — ONE SIGNATURE PER THEME
+   Same motion rules as everything else (docs/MOTION.md): loops step on the
+   shared 10 fps beat, only transform/opacity animate, no filter or backdrop
+   blur on anything always visible, calm mode and reduced motion stop them.
+   Colours come from each theme's own tokens.
+   ============================================================ */
+.sig-holo,.sig-globe,.sig-grid{display:none;pointer-events:none}
+
+/* RAYO · HOLOGRAPHIC: projector scanlines on the clock and weather dials; the
+   reactor re-projects (scanlines + one light sweep) when the HUD wakes or listens */
+/* clipped by a plain circle, not a soft mask: a mask over a moving layer is
+   re-composited every step and measured +4% of a core */
+html[data-theme="rayo"] .sig-holo{display:block;position:absolute;inset:60px;border-radius:50%;overflow:hidden;z-index:4;
+  visibility:hidden}
+/* only present during a pass: static scanlines over the spinning rings cost ~2%
+   of a core all the time, so the reactor gets them just while it re-projects */
+html[data-theme="rayo"].holo-scan .sig-holo{visibility:visible;
+  background:repeating-linear-gradient(0deg,rgb(var(--ice-hi-rgb) / .05) 0 1px,transparent 1px 4px)}
+html[data-theme="rayo"] .sig-holo .sweep{position:absolute;left:0;right:0;top:0;height:90px;will-change:transform;
+  background:linear-gradient(180deg,transparent,rgb(var(--ice-bright-rgb) / .07) 35%,rgb(var(--ice-hi-rgb) / .16) 50%,rgb(var(--ice-bright-rgb) / .07) 65%,transparent);
+  transform:translateY(-100px)}
+/* the sweep is an event, not a loop: one pass when the HUD wakes from calm or
+   starts listening (calm.js adds .holo-scan for 3 s). As a loop it measured +2%
+   of a core; as a one-off it costs nothing between passes. */
+html[data-theme="rayo"].holo-scan .sig-holo .sweep{animation:holoSweep 3s steps(30) 1 both}
+@keyframes holoSweep{from{transform:translateY(-100px)}to{transform:translateY(460px)}}
+html[data-theme="rayo"] :is(.clock,.worb)::after{content:"";position:absolute;inset:0;border-radius:50%;pointer-events:none;
+  background:repeating-linear-gradient(0deg,rgb(var(--ice-hi-rgb) / .04) 0 1px,transparent 1px 4px)}
+html[data-theme="rayo"] .baseline .brand{text-shadow:-1px 0 rgb(var(--ice-rgb) / .55),1px 0 rgb(var(--ice-hi-rgb) / .25)}
+
+/* CYBERPUNK · NEON GLOW: the big readouts and the wordmark are neon tubes
+   (static glow); the wordmark gives a short tube flicker every 10 s */
+html[data-theme="cyberpunk"] :is(.clock .face .h,.worb .face .deg,.aw .n,.of-n,.baseline .brand,#fan-gauge .g-val){
+  text-shadow:0 0 2px rgb(var(--ice-hi-rgb) / .9),0 0 8px rgb(var(--ice-rgb) / .85),0 0 22px rgb(var(--ice-rgb) / .5)}
+html[data-theme="cyberpunk"] #fan-gauge .g-val{paint-order:stroke;stroke:rgb(var(--ice-rgb) / .35);stroke-width:1px}
+html[data-theme="cyberpunk"] .baseline .brand{color:var(--ice-hi);animation:neonFlicker 10s steps(1) infinite}
+/* every keyframe sits on a 100 ms boundary, so the flicker lands on the shared beat */
+@keyframes neonFlicker{0%,90%{opacity:1}91%{opacity:.35}92%{opacity:1}94%{opacity:.55}95%,100%{opacity:1}}
+html[data-theme="cyberpunk"] .baseline .line{box-shadow:0 0 6px var(--gold),0 0 16px var(--gold)}
+html[data-theme="cyberpunk"] .launch .rail{box-shadow:0 0 8px rgb(var(--ice-rgb) / .8)}
+
+/* TRON · WIREFRAME 3D: the Grid runs towards you under the HUD, and a wire
+   globe encloses the core */
+html[data-theme="tron"] .sig-grid{display:block;position:absolute;left:0;right:0;bottom:0;height:440px;z-index:0;overflow:hidden;
+  perspective:520px;perspective-origin:50% 0%;
+  -webkit-mask:linear-gradient(to top,#000 15%,transparent 70%);mask:linear-gradient(to top,#000 15%,transparent 70%)}
+html[data-theme="tron"] .sig-grid .plane{position:absolute;left:-60%;right:-60%;top:0;height:900px;
+  transform-origin:50% 0;transform:rotateX(74deg)}
+html[data-theme="tron"] .sig-grid .plane i{position:absolute;left:0;right:0;top:-80px;bottom:0;will-change:transform;
+  background:repeating-linear-gradient(90deg,rgb(var(--ice-rgb) / .32) 0 2px,transparent 2px 80px),
+             repeating-linear-gradient(0deg,rgb(var(--ice-rgb) / .32) 0 2px,transparent 2px 80px);
+  animation:gridRun 2s steps(20) infinite}
+@keyframes gridRun{from{transform:translateY(0)}to{transform:translateY(80px)}}
+html[data-theme="tron"] .sig-globe{display:block;position:absolute;inset:0;margin:auto;width:220px;height:220px;z-index:3;overflow:visible;
+  fill:none;stroke:rgb(var(--ice-bright-rgb) / .7);stroke-width:1.8;rotate:1 -.3 0 0deg;
+  transition:rotate var(--dur-snappy) var(--spring-snappy)}
+html[data-theme="tron"].rv-thinking .sig-globe,html[data-theme="tron"].rv-answer .sig-globe{rotate:1 -.3 0 64deg;
+  transition:rotate var(--dur-bounce) var(--spring-bounce)}
+html[data-theme="tron"] .sig-globe line{stroke:rgb(var(--ice-rgb) / .35)}
+
+/* CYBORG · GLASSMORPHISM: every cluster sits on a frosted plate. Faux frost
+   (sheen + rim + inner shadow): these are always on screen, so no backdrop blur */
+html[data-theme="cyborg"] :is(.vitals,.cap,.netblk,.launch,.office,.clock,.worb)::after{content:"";position:absolute;z-index:-1;pointer-events:none;
+  inset:-18px -22px;border-radius:20px;border:1px solid rgba(255,255,255,.10);
+  background:linear-gradient(160deg,rgba(255,255,255,.075),rgba(255,255,255,.018) 42%,rgb(var(--ice-rgb) / .035)),
+             rgb(var(--ice-rgb) / .025);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.2),inset 0 -20px 34px rgba(0,0,0,.28),0 18px 44px rgba(0,0,0,.45)}
+html[data-theme="cyborg"] :is(.clock,.worb)::after{inset:-14px;border-radius:50%}
+html[data-theme="cyborg"] .launch::after{inset:-14px -20px -14px -24px}
+html[data-theme="cyborg"] .vitals::after{inset:-16px -22px 0}
+html[data-theme="cyborg"] .cap::after{inset:-4px -22px -14px}
+html[data-theme="cyborg"] .office::after{inset:-8px -22px -8px -8px}
+
+@media (prefers-reduced-motion:reduce){ .sig-holo .sweep{display:none} }
+
+/* ============================================================
+   R7 — THE 3D REACTOR (core/reactor3d.js, three.js vendored in vendor/three)
+   When WebGL starts, html.r3d is set and the CSS rings, ruler, blades and core
+   step aside (display:none, so they cost nothing). Without WebGL they stay.
+   ============================================================ */
+.r3d-canvas{position:absolute;inset:0;width:560px;height:560px;z-index:1;pointer-events:none}
+html.r3d .reactor :is(.ring,.ruler,.blades){display:none}
+html.r3d .orb :is(.core,.glow,.hi){display:none}
 </style>
 <script src="core/obs-fix.js"></script>
 </head>
@@ -963,6 +1048,8 @@ html.rayo-idle.rayo-calm .orb .core{animation-play-state:paused!important}
 <div class="atmos"></div>
 
 <div class="stage deck">
+  <!-- R6: TRON's grid floor (hidden in the other themes) -->
+  <div class="sig-grid" aria-hidden="true"><div class="plane"><i></i></div></div>
   <!-- TOP STATUS STRIP -->
   <div class="cluster topstrip">
     <span><span class="live" id="data-src">LIVE</span>&nbsp; RAYO</span>
@@ -1023,6 +1110,12 @@ html.rayo-idle.rayo-calm .orb .core{animation-play-state:paused!important}
       <span class="hi"></span>
       <span class="tick t"></span><span class="tick l"></span><span class="tick r"></span>
     </div>
+    <!-- R6 signatures (shown per theme): RAYO hologram, TRON wire globe -->
+    <div class="sig-holo" aria-hidden="true"><i class="sweep"></i></div>
+    <svg class="sig-globe" viewBox="0 0 220 220" aria-hidden="true">
+      <circle cx="110" cy="110" r="104"/><ellipse cx="110" cy="110" rx="104" ry="36"/><ellipse cx="110" cy="110" rx="104" ry="72"/>
+      <ellipse cx="110" cy="110" rx="36" ry="104"/><ellipse cx="110" cy="110" rx="72" ry="104"/><line x1="110" y1="6" x2="110" y2="214"/><line x1="6" y1="110" x2="214" y2="110"/>
+    </svg>
     <div class="hub-hit" id="hub-hit" title="click: menu  ·  double-click: bench  ·  triple-click: shut down"></div>
   </div>
 
@@ -1181,5 +1274,6 @@ html.rayo-idle.rayo-calm .orb .core{animation-play-state:paused!important}
 <script src="core/voice.js"></script>
 <script src="core/control.js"></script>
 <script src="core/calm.js"></script>
+<script type="module" src="core/reactor3d.js"></script>
 </body>
 </html>

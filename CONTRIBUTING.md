@@ -1,12 +1,13 @@
 # Contributing to Rayo
 
 Thanks for helping make Linux desktops look heroic. Rayo is intentionally
-small and dependency-free, so contributing is easy.
+small, with one vendored library (three.js, for the 3D reactor), so contributing is easy.
 
 ## Ground rules
 
-- **No build step, no framework, no dependencies.** The HUD is plain
-  HTML/CSS/JS; the bridge is one stdlib Python file. Keep it that way.
+- **No build step, no framework, no new dependencies.** The HUD is plain
+  HTML/CSS/JS plus three.js, vendored in `hud/vendor/three`. The bridge is one
+  stdlib Python file. Keep it that way, and measure the CPU before adding anything.
 - Test your change in the browser first (`./run.sh` then open the printed URL),
   and on the real desktop (`./stop.sh && ./start.sh`) if it touches the overlay.
 - One change per pull request. Keep commits focused.

@@ -6,7 +6,7 @@
    - Anything happening wakes it for another minute: the pointer over the HUD,
      a click or key, voice, the desktop shown again after being covered, a
      status word changing (hud.js fires `rayo:wake`), or an action.
-   - LAST: what Rayo last did for you, kept in this browser (localStorage).
+   - LAST: what Rayo just did, shown for 5 seconds; nothing is stored.
    ============================================================ */
 (() => {
   'use strict';
@@ -14,7 +14,15 @@
   const QUIET_MS = 60000;
   let timer = null;
 
+  // RAYO's hologram re-projects (one light sweep) when the HUD wakes or listens
+  let scanTimer = null;
+  function scan() {
+    root.classList.remove('holo-scan'); void root.offsetWidth;   // restart the pass
+    root.classList.add('holo-scan');
+    clearTimeout(scanTimer); scanTimer = setTimeout(() => root.classList.remove('holo-scan'), 3100);
+  }
   function wake() {
+    if (root.classList.contains('rayo-calm')) scan();
     root.classList.remove('rayo-calm');
     clearTimeout(timer);
     timer = setTimeout(() => {
@@ -33,45 +41,31 @@
     const now = root.className;
     const voiceChanged = (now.match(/rv-[a-z]+/g) || []).join() !== (was.match(/rv-[a-z]+/g) || []).join();
     const uncovered = /\brayo-idle\b/.test(was) && !/\brayo-idle\b/.test(now);
+    if (/\brv-listening\b/.test(now) && !/\brv-listening\b/.test(was)) scan();
     was = now;
     if (voiceChanged || uncovered) wake();
   }).observe(root, { attributes: true, attributeFilter: ['class'] });
-  wake();
+  wake(); scan();
 
   // ---- LAST ----------------------------------------------------------------
-  const KEY = 'rayo.last';
+  // A short confirmation of what Rayo just did, shown for 5 seconds and then
+  // gone. Nothing is stored: what you opened is nobody else's business.
+  const SHOW_MS = 5000;
+  try { localStorage.removeItem('rayo.last'); } catch {}      // older builds kept it
   const WORDS = { web: 'opened the browser', files: 'opened Files', terminal: 'opened a terminal',
     settings: 'opened Settings', displays: 'opened display settings', dnd: 'toggled Focus',
-    lock: 'locked the screen', office: 'opened the Office', voice: 'switched voice',
-    logout: 'logged you out', suspend: 'put the laptop to sleep', reboot: 'restarted' };
-  const store = {
-    get() { try { return JSON.parse(localStorage.getItem(KEY)); } catch { return null; } },
-    set(v) { try { localStorage.setItem(KEY, JSON.stringify(v)); } catch {} },
-  };
-  const ago = (t) => {
-    const m = Math.round((Date.now() - t) / 60000);
-    if (m < 1) return 'just now';
-    if (m < 60) return `${m} min ago`;
-    const h = Math.round(m / 60);
-    return h < 24 ? `${h} h ago` : `${Math.round(h / 24)} d ago`;
-  };
-  const esc = (x) => String(x).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-  function paint() {
-    const v = store.get(), row = $('b-last');
-    if (!row) return;
-    if (!v || !v.text || Date.now() - v.at > 7 * 86400000) { row.hidden = true; return; }
-    const html = `${esc(v.text)}<small>${ago(v.at)}</small>`;
-    if ($('b-last-v').innerHTML !== html) $('b-last-v').innerHTML = html;
-    row.hidden = false;
-  }
+    lock: 'locked the screen', office: 'opening the Office', voice: 'switched voice',
+    logout: 'logging you out', suspend: 'going to sleep', reboot: 'restarting' };
+  let hideTimer = null;
   addEventListener('rayo:action', (e) => {
-    const d = e.detail || {};
+    const d = e.detail || {}, row = $('b-last');
     const text = d.said ? d.said.replace(/[.!]+$/, '') : WORDS[d.act];
-    if (!text) return;
-    store.set({ text: text.charAt(0).toUpperCase() + text.slice(1), at: Date.now() });
-    paint();
+    if (!row || !text) return;
+    $('b-last-v').textContent = text.charAt(0).toUpperCase() + text.slice(1);
+    row.hidden = false;
+    clearTimeout(hideTimer);
+    hideTimer = setTimeout(() => { row.hidden = true; }, SHOW_MS);
   });
-  paint(); setInterval(paint, 30000);
 
   // ---- the MG.OFFICE card opens the Office (overlay action "office") --------
   const office = $('office');
