@@ -612,7 +612,11 @@ html.rayo-idle *::after{animation-play-state:paused!important}
 }
 
 /* Command Deck position overrides (beat the classic id-selectors) */
-#pwr.cap{left:100px;top:672px}
+#pwr.cap{left:100px;top:664px}
+.cap .row .k small{font-size:10px;letter-spacing:1px;color:var(--muted);margin-left:6px}
+/* "charging · 48m to full" is longer than "on battery": keep every row on one line */
+#pwr.cap{width:310px}
+.cap .row{white-space:nowrap;gap:14px}
 #pwr.cap.charging{box-shadow:none;border:0}
 .vitals{top:404px}
 .cooling{left:50%;transform:translateX(-50%);bottom:52px}
@@ -1088,6 +1092,7 @@ html.r3d .orb :is(.core,.glow,.hi){display:none}
     <div class="row"><span class="k">POWER GRID</span><span class="v"><span id="pwr-v">--</span> &middot; <span id="pwr-a" style="color:var(--muted)">--</span></span></div>
     <div class="bar"><i id="pwr-b"></i></div>
     <div class="row"><span class="k">DATA &middot; MONTH</span><span class="v" id="t-month">--</span></div>
+    <div class="row"><span class="k" id="t-year-k">DATA &middot; YEAR</span><span class="v" id="t-year">--</span></div>
   </div>
 
   <!-- CENTER REACTOR -->
@@ -1228,6 +1233,7 @@ html.r3d .orb :is(.core,.glow,.hi){display:none}
     <div class="r"><span class="k">POWER CELL</span><span class="v" id="b-pwr">--</span></div>
     <div class="r"><span class="k">UPLINK</span><span class="v ok" id="b-ssid">SECURE</span></div>
     <div class="r"><span class="k">DATA / MONTH</span><span class="v" id="b-data">--</span></div>
+    <div class="r"><span class="k" id="b-data-y-k">DATA / YEAR</span><span class="v" id="b-data-y">--</span></div>
     <div class="sec">INTEGRITY</div>
     <div class="r"><span class="k">SECURE LINK</span><span class="v" id="b-link">--</span></div>
     <div class="r"><span class="k">SECURITY AUDIT</span><span class="v" id="b-audit">--</span></div>

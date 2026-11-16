@@ -245,6 +245,12 @@
     if ($('pwr')) $('pwr').classList.toggle('charging', !!d.charging && d.batt_status !== 'Full');
     if ($('pwr-b')) paintBar($('pwr-b'), batt);
     if ($('t-month')) $('t-month').textContent = fmtTotal(d.month_bytes);
+    // the yearly total began when it was added; say so until it covers the whole year
+    const yr = new Date().getFullYear(), since = d.year_since || '';
+    const partial = since && since !== `${yr}-01-01`;
+    const sinceTxt = partial ? 'since ' + new Date(since + 'T00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '';
+    if ($('t-year')) $('t-year').textContent = d.year_bytes != null ? fmtTotal(d.year_bytes) : '—';
+    if ($('t-year-k')) $('t-year-k').innerHTML = `DATA &middot; ${yr}${sinceTxt ? `<small>${sinceTxt}</small>` : ''}`;
 
     // vitals arc gauges
     const cpu = d.cpu, mem = d.mem, disk = d.disk;
@@ -285,6 +291,8 @@
       if ($('b-temp-b')) paintBar($('b-temp-b'), temp != null ? clamp(temp, 0, 100) : 0);
       if ($('b-pwr')) $('b-pwr').textContent = Math.round(d.battery) + '%';
       if ($('b-data')) $('b-data').textContent = fmtTotal(d.month_bytes);
+      if ($('b-data-y')) $('b-data-y').textContent = d.year_bytes != null ? fmtTotal(d.year_bytes) : '—';
+      if ($('b-ssid') && d.ssid) $('b-ssid').textContent = d.ssid.length > 22 ? d.ssid.slice(0, 21) + '…' : d.ssid;
       if ($('b-load')) $('b-load').textContent = Math.round(cpu);
       if ($('b-disk2')) $('b-disk2').textContent = Math.round(disk);
       if ($('b-down')) $('b-down').textContent = fmtRate(d.down);

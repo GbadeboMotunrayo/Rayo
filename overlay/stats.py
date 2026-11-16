@@ -232,7 +232,8 @@ def cpu_temp():
 # Caveat: it counts traffic while Rayo is running.
 _USAGE_DIR = os.path.expanduser("~/.local/share/rayo")
 _USAGE_FILE = os.path.join(_USAGE_DIR, "usage.json")
-_usage = {"month": None, "bytes": 0, "last": None, "loaded": False, "flushed": 0.0}
+_usage = {"month": None, "bytes": 0, "last": None, "loaded": False, "flushed": 0.0,
+          "year": None, "year_bytes": 0, "year_since": None}
 
 def _iface_total_bytes(iface):
     for line in read("/proc/net/dev").splitlines():
@@ -245,17 +246,29 @@ def _iface_total_bytes(iface):
     return None
 
 def monthly_usage(iface):
-    month = time.strftime("%Y-%m")
+    """Bytes this month and this year. The yearly total started on the day it was
+    added (17 Nov 2026), seeded with that month so far; earlier months were never
+    recorded, so year_since says when counting began."""
+    month, year = time.strftime("%Y-%m"), time.strftime("%Y")
     if not _usage["loaded"]:
+        d = {}
         try:
             with open(_USAGE_FILE) as f:
                 d = json.load(f)
-            if d.get("month") == month:
-                _usage["bytes"] = int(d.get("bytes", 0))
         except Exception:
             pass
+        if d.get("month") == month:
+            _usage["bytes"] = int(d.get("bytes", 0))
+        if d.get("year") == year:
+            _usage["year_bytes"] = int(d.get("year_bytes", 0))
+            _usage["year_since"] = d.get("year_since")
+        else:                                     # first run with yearly counting, or a new year
+            _usage["year_bytes"] = _usage["bytes"]
+            _usage["year_since"] = time.strftime("%Y-%m-01") if d.get("year") is None and _usage["bytes"] else time.strftime("%Y-%m-%d")
         _usage["loaded"] = True
-        _usage["month"] = month
+        _usage["month"], _usage["year"] = month, year
+    if _usage["year"] != year:                    # new year → reset the yearly total
+        _usage.update(year=year, year_bytes=0, year_since=time.strftime("%Y-%m-%d"))
     if _usage["month"] != month:                  # new month → reset
         _usage.update(month=month, bytes=0, last=None)
     if iface:
@@ -265,6 +278,7 @@ def monthly_usage(iface):
                 delta = cur - _usage["last"]
                 if delta > 0:                     # ignore counter resets
                     _usage["bytes"] += delta
+                    _usage["year_bytes"] += delta
             _usage["last"] = cur
     now = time.time()
     if now - _usage["flushed"] > 15:              # flush at most every 15s
@@ -273,7 +287,8 @@ def monthly_usage(iface):
             os.makedirs(_USAGE_DIR, exist_ok=True)
             tmp = _USAGE_FILE + ".tmp"
             with open(tmp, "w") as f:
-                json.dump({"month": _usage["month"], "bytes": _usage["bytes"]}, f)
+                json.dump({"month": _usage["month"], "bytes": _usage["bytes"], "year": _usage["year"],
+                           "year_bytes": _usage["year_bytes"], "year_since": _usage["year_since"]}, f)
             os.replace(tmp, _USAGE_FILE)
         except Exception:
             pass
@@ -484,17 +499,72 @@ def _ics_when(v):
     except ValueError:
         return None, False
 
+_DAYS = {"MO": 0, "TU": 1, "WE": 2, "TH": 3, "FR": 4, "SA": 5, "SU": 6}
+
+def _occurrences(start, rule, exdates, until_view):
+    """Expand the common RRULE shapes (DAILY / WEEKLY with BYDAY / MONTHLY / YEARLY,
+    with INTERVAL, COUNT, UNTIL) up to until_view. Rarer shapes yield only the start."""
+    r = dict(kv.split("=", 1) for kv in rule.split(";") if "=" in kv)
+    freq, step = r.get("FREQ"), max(1, int(r.get("INTERVAL", "1") or 1))
+    count = int(r["COUNT"]) if r.get("COUNT", "").isdigit() else None
+    until = _ics_when(r["UNTIL"])[0] if r.get("UNTIL") else None
+    days = sorted(_DAYS[d[-2:]] for d in r.get("BYDAY", "").split(",") if d[-2:] in _DAYS)
+    n, cur = 0, start
+    for _ in range(3000):                                       # hard stop
+        cands = [cur]
+        if freq == "WEEKLY" and days:
+            monday = cur - timedelta(days=cur.weekday())
+            cands = [monday + timedelta(days=d) for d in days]
+        for c in cands:
+            if c < start:
+                continue
+            if (until and c > until) or (count is not None and n >= count) or c > until_view:
+                return
+            n += 1
+            if c.strftime("%Y%m%d%H%M") not in exdates:
+                yield c
+        if freq == "DAILY":
+            cur += timedelta(days=step)
+        elif freq == "WEEKLY":
+            cur += timedelta(weeks=step)
+        elif freq == "MONTHLY":
+            m = cur.month - 1 + step
+            try:
+                cur = cur.replace(year=cur.year + m // 12, month=m % 12 + 1)
+            except ValueError:                                  # 31st in a short month: skip it
+                cur = cur.replace(day=1, year=cur.year + m // 12, month=m % 12 + 1) + timedelta(days=40)
+        elif freq == "YEARLY":
+            try:
+                cur = cur.replace(year=cur.year + step)
+            except ValueError:
+                cur = cur.replace(year=cur.year + step, day=28)
+        else:
+            return
+
 def _events_from_ics(text):
     text = re.sub(r"\r?\n[ \t]", "", text)                    # unfold long lines
+    view = datetime.now().astimezone() + timedelta(hours=36)
     for blk in re.findall(r"BEGIN:VEVENT(.*?)END:VEVENT", text, re.S):
-        if re.search(r"^RRULE", blk, re.M):
-            continue
         m = re.search(r"^DTSTART[^:\n]*:(.+)$", blk, re.M)
         t = re.search(r"^SUMMARY[^:\n]*:(.*)$", blk, re.M)
-        if m:
-            when, allday = _ics_when(m.group(1))
-            if when:
-                yield when, allday, (t.group(1).strip() if t else "").replace("\\,", ",")[:60]
+        if not m:
+            continue
+        when, allday = _ics_when(m.group(1))
+        if not when:
+            continue
+        title = (t.group(1).strip() if t else "").replace("\\,", ",")[:60]
+        rr = re.search(r"^RRULE:(.+)$", blk, re.M)
+        if not rr:
+            yield when, allday, title
+            continue
+        ex = set()
+        for line in re.findall(r"^EXDATE[^:\n]*:(.+)$", blk, re.M):
+            for v in line.split(","):
+                w = _ics_when(v)[0]
+                if w:
+                    ex.add(w.strftime("%Y%m%d%H%M"))
+        for occ in _occurrences(when, rr.group(1).strip(), ex, view):
+            yield occ, allday, title
 
 def _check_calendar():
     now = datetime.now().astimezone()
@@ -514,10 +584,15 @@ def _check_calendar():
             pass
     ahead = sorted((e for e in soon if e[0] >= now - timedelta(minutes=10) and e[0] <= now + timedelta(hours=36)),
                    key=lambda e: e[0])
+    # GNOME's built-in local "system" calendar always exists; only real accounts count as connected
+    sources = len([f for f in glob.glob(os.path.expanduser("~/.local/share/evolution/calendar/*/calendar.ics"))
+                   + glob.glob(os.path.expanduser("~/.cache/evolution/calendar/*/cache.db"))
+                   if "/system/" not in f and "/trash/" not in f])
     if not ahead:
-        return {"next_event": None}
+        return {"next_event": None, "cal_sources": max(0, sources)}
     when, allday, title = ahead[0]
-    return {"next_event": {"at": int(when.timestamp() * 1000), "allday": allday, "title": title or "Untitled"}}
+    return {"next_event": {"at": int(when.timestamp() * 1000), "allday": allday, "title": title or "Untitled"},
+            "cal_sources": max(0, sources)}
 
 
 def start_checks():
@@ -569,7 +644,7 @@ def sample():
         "link": link_state(iface),
         **_threat, **_office, **_cal,
         "down": down, "up": up, "signal": signal,
-        "month_bytes": monthly_usage(iface),
+        "month_bytes": monthly_usage(iface), "year_bytes": _usage["year_bytes"], "year_since": _usage["year_since"],
         "ssid": ssid or iface or "—", "iface": iface,
         "boot": boot_ms(), "ts": int(time.time() * 1000),
         **weather(),
