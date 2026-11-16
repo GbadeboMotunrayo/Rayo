@@ -1045,6 +1045,31 @@ html[data-theme="cyborg"] .office::after{inset:-8px -22px -8px -8px}
 .r3d-canvas{position:absolute;inset:0;width:560px;height:560px;z-index:1;pointer-events:none}
 html.r3d .reactor :is(.ring,.ruler,.blades){display:none}
 html.r3d .orb :is(.core,.glow,.hi){display:none}
+
+/* ============================================================
+   POWER COLOURS — every letter on the HUD follows the power state (stats.py "power"):
+   charging = the theme's charging gold · plugged in but not charging (held at the
+   charge limit, or full) = white · on battery = the theme as designed · on battery
+   at 10% or less = red. Labels take a softer shade of the same colour.
+   ============================================================ */
+html.pw-charging{--pw:var(--gold);--pw-lo:color-mix(in srgb,var(--gold) 64%,var(--ink))}
+html.pw-plugged{--pw:#f4f8fb;--pw-lo:rgba(244,248,251,.62)}
+html.pw-low{--pw:var(--red);--pw-lo:color-mix(in srgb,var(--red) 66%,var(--ink))}
+:is(html.pw-charging,html.pw-plugged,html.pw-low) :is(.stage,.bench) :not(svg):not(svg *){color:var(--pw)!important}
+:is(html.pw-charging,html.pw-plugged,html.pw-low) :is(.stage,.bench) :is(.k,.lbl,.sec,.tele-sec,.w,.loc,.x,.sub,.aux,.cardinal,.of-k,.b-k,.cd-msg,.vg-k,.u,.s,.corelbl){color:var(--pw-lo)!important}
+:is(html.pw-charging,html.pw-plugged,html.pw-low) #fan-gauge :is(.g-val){fill:var(--pw)!important}
+:is(html.pw-charging,html.pw-plugged,html.pw-low) #fan-gauge :is(.g-unit,.g-lbl){fill:var(--pw-lo)!important}
+/* the power grid bar matches: white when plugged in, red when low (gold while charging already) */
+html.pw-plugged #pwr .bar>i{background:linear-gradient(90deg,rgba(244,248,251,.35),#f4f8fb);box-shadow:0 0 10px rgba(244,248,251,.5)}
+html.pw-low #pwr .bar>i{background:linear-gradient(90deg,#7a1f22,var(--red));box-shadow:0 0 10px rgba(229,72,77,.6)}
+
+/* ============================================================
+   LIVING DIALS — the clock's and the weather orb's rings turn (core/dials.js).
+   Drawn on one small canvas per dial from pre-rendered bitmaps: rotating the
+   masked CSS rings cost ~33% of a core (measured), the canvas a fraction of that.
+   ============================================================ */
+.dial-canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.cring.dial-off{display:none}
 </style>
 <script src="core/obs-fix.js"></script>
 </head>
@@ -1280,6 +1305,7 @@ html.r3d .orb :is(.core,.glow,.hi){display:none}
 <script src="core/voice.js"></script>
 <script src="core/control.js"></script>
 <script src="core/calm.js"></script>
+<script src="core/dials.js"></script>
 <script type="module" src="core/reactor3d.js"></script>
 </body>
 </html>

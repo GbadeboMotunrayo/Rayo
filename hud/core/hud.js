@@ -197,6 +197,10 @@
   };
   const battLabel = (d) => {
     const status = d.batt_status || (d.charging ? 'Charging' : 'Discharging');
+    if (d.power === 'plugged') {                    // connected, not charging: full or held at the limit
+      if (status === 'Full' || d.battery >= 99) return 'plugged in · full';
+      return d.charge_limit && d.battery >= d.charge_limit - 2 ? `plugged in · held at ${d.charge_limit}%` : 'plugged in';
+    }
     if (status === 'Full' || d.battery >= 100 && d.charging) return 'full · on AC';
     const t = fmtDur(d.batt_min);
     if (status === 'Charging') return t ? `charging · ${t} to full` : 'charging';
@@ -238,8 +242,14 @@
       src.classList.toggle('sim', !!(d.mock || stale));
     }
 
-    // power / capacity
+    // power / capacity — and the colour of every letter follows the power state
     const batt = d.battery;
+    const pw = d.mock ? 'battery' : (d.power || 'battery');
+    if (document.documentElement.dataset.power !== pw) {
+      document.documentElement.classList.remove('pw-charging', 'pw-plugged', 'pw-battery', 'pw-low');
+      document.documentElement.classList.add('pw-' + pw);
+      document.documentElement.dataset.power = pw;
+    }
     if ($('pwr-v')) $('pwr-v').textContent = `${Math.round(batt)}%`;
     if ($('pwr-a')) $('pwr-a').textContent = battLabel(d);
     if ($('pwr')) $('pwr').classList.toggle('charging', !!d.charging && d.batt_status !== 'Full');

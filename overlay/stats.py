@@ -98,8 +98,7 @@ def battery_info():
         return 100, True, "AC", None  # desktop / no battery
     pct = read(os.path.join(base, "capacity"), "100")
     status = read(os.path.join(base, "status"), "Unknown")
-    ac = read("/sys/class/power_supply/AC*/online") or read("/sys/class/power_supply/ACAD/online", "")
-    charging = status == "Charging" or (status != "Discharging" and ac == "1")
+    charging = status == "Charging"
 
     # time estimate: prefer charge_* (µAh, µA); fall back to energy_* (µWh, µW)
     now = _num(os.path.join(base, "charge_now"))
@@ -123,6 +122,31 @@ def battery_info():
 
     p = int(pct) if pct.isdigit() else 100
     return p, charging, status, minutes
+
+
+def plugged_in():
+    """True when any charger is connected: the AC entry or a USB-C port (this XPS
+    charges over USB-C, which shows up as a USB supply)."""
+    for d in glob.glob("/sys/class/power_supply/*"):
+        if read(os.path.join(d, "type")) in ("Mains", "USB") and read(os.path.join(d, "online")) == "1":
+            return True
+    return False
+
+
+def power_state(batt, status, plugged):
+    """charging · plugged (connected but not charging, e.g. held at the 80% limit, or
+    full) · battery · low (on battery at 10% or less). The HUD colours its text by this."""
+    if status == "Charging":
+        return "charging"
+    if plugged:
+        return "plugged"
+    return "low" if batt <= 10 else "battery"
+
+
+def charge_limit():
+    base = first_glob("/sys/class/power_supply/BAT*")
+    v = read(os.path.join(base, "charge_control_end_threshold")) if base else ""
+    return int(v) if v.isdigit() and int(v) < 100 else None
 
 
 # ---- fan (tacho RPM) --------------------------------------------------------
@@ -632,11 +656,14 @@ def sample():
     down, up, signal, ssid, iface = net_info()
     fan_rpm, fan_max, fan_label = fan_info()
     temp = cpu_temp()
+    plug = plugged_in()
     return {
+        "power": power_state(batt, batt_status, plug),
         "cpu": round(cpu, 1), "freq": cpu_freq_ghz(),
         "mem": mem_p, "mem_used": mem_u, "mem_total": mem_t,
         "disk": disk_p, "disk_used": disk_u, "disk_total": disk_t,
         "battery": batt, "charging": charging,
+        "plugged": plugged_in(), "charge_limit": charge_limit(),
         "batt_status": batt_status, "batt_min": batt_min,
         "fan": fan_rpm, "fan_max": fan_max, "fan_label": fan_label,
         "cpu_temp": temp,

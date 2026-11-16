@@ -103,7 +103,21 @@ After a quiet minute (`core/calm.js`) the page adds `html.rayo-calm`: **every lo
   - `?r3d=0` forces the CSS reactor.
   - Reduced motion: one still frame.
 
-## 9. Checking a change
+## 9. Turning dials and power colours (17 Nov 2026)
+
+- **Dial rings tick once a second** (`core/dials.js`). Each ring is drawn once into a bitmap, and a canvas per dial draws them rotated. The clock's outer ring is a seconds ring, in step with the wall clock. Measured, window plus web process:
+
+  | How the rings turned | CPU (one core) |
+  |---|---|
+  | No spin | about 47% |
+  | Rotating the masked CSS rings | about 83%: the masks are recomputed every step |
+  | Canvas at 10 fps | about 60% |
+  | **Canvas ticking once a second** | **about 48%** |
+
+  Prefer a once-a-second tick for anything clock-like.
+- **Power colours:** `html.pw-charging`, `.pw-plugged`, `.pw-battery` and `.pw-low` come from `stats.py` `power`. Every letter takes `--pw`, labels take `--pw-lo`, and the power bar matches. No colour transitions: they would replace the elements' own transition lists.
+
+## 10. Checking a change
 
 1. `./run.sh` and open `http://localhost:8099`. Click the hub once, twice and three times. Press **Esc** to cancel the countdown.
 2. Check all four themes (`?theme=rayo|cyberpunk|cyborg|tron`).
