@@ -23,7 +23,7 @@ What Rayo understands (wake word first, e.g. "Rayo, open claude"):
   lock · sleep · focus · help
 Power actions (shut down, restart, sleep, log out) always ask "Are you sure?" first; only a clear yes goes ahead.
 """
-import os, re, time, glob, shutil, difflib, subprocess, urllib.parse
+import os, re, json, time, glob, shutil, difflib, subprocess, urllib.parse
 
 HOME = os.path.expanduser("~")
 
@@ -237,7 +237,11 @@ def plan(kind, arg=None, msg=""):
 
 
 def clean(text):
-    t = " " + norm(text) + " "
+    t = norm(text)
+    # Whisper writes a spoken "Rayo, police!" with punctuation: drop the name and the !?, marks
+    t = re.sub(r"^(?:(?:hey|ok|okay) )?(?:rayo|ray oh|rio|raya)\s*[,!?:;]+\s*", "", t)
+    t = re.sub(r"\s*[!?]+", " ", t).rstrip(" ,;:")
+    t = " " + t + " "
     for f in FILLER:
         t = t.replace(" " + f, " ")
     t = re.sub(r"\b(for me|thank you|thanks)\b", "", t)
@@ -397,6 +401,58 @@ def _brain(q):
     return plan("brain", q, "thinking…")
 
 
+GLASSES = os.path.join(os.path.dirname(os.path.abspath(__file__)), "glasses.py")
+
+
+MISHEARD_NAME = r"^(?:rio|rail|raya|ryo|rayyo|ray o|rae o|radio|rao|rayo)\s+"   # how Whisper writes a shouted "Rayo"
+
+
+def glasses_intent(t):
+    """Smart-glasses commands. "police" / "no police" film until told to stop."""
+    p = _glasses_intent(t)
+    if not p and re.match(MISHEARD_NAME, t):            # "rio police" -> "police" (only if it's then a glasses command)
+        p = _glasses_intent(re.sub(MISHEARD_NAME, "", t))
+    return p
+
+
+def _glasses_intent(t):
+    if re.fullmatch(r"(?:no|stop|end|cancel|enough) police|police (?:off|over|done|gone)", t):
+        return plan("glasses", ["police", "off"], "stopping")
+    if re.fullmatch(r"(?:the )?police(?: on| ahead| here| now| coming)?|(?:it'?s|there'?s) (?:the )?police", t):
+        return plan("glasses", ["police", "on"], "recording")
+    if re.search(r"\b(?:take|snap|grab|get) (?:a |another )?(?:picture|photo|pic|snap|shot)\b|^(?:picture|photo|snap)(?: this| that)?$", t):
+        return plan("glasses", ["photo"], "taking a picture")
+    if re.search(r"\b(?:stop|end|finish|cut) (?:the |my )?(?:audio|voice|sound) (?:recording|note)\b", t):
+        return plan("glasses", ["audio", "off"], "stopping the audio")
+    if re.search(r"\b(?:record|start recording) (?:the )?(?:audio|sound|voice)\b|\b(?:make|start|take) (?:an? )?(?:audio|voice) (?:recording|note)\b", t):
+        return plan("glasses", ["audio", "on"], "recording audio")
+    if re.search(r"\b(?:stop|end|finish|cut) (?:the |my )?(?:recording|video|filming)\b", t):
+        return plan("glasses", ["video", "off"], "stopping the video")
+    if re.search(r"\b(?:make|start|take|begin) (?:a |the )?(?:recording|video)\b|^(?:start )?(?:recording|filming)(?: this| now)?$|^record(?: this| a video| video)?$", t):
+        return plan("glasses", ["video", "on"], "recording video")
+    if re.search(r"\bglasses\b", t) and re.search(r"\b(?:sync|synchroni[sz]e|download|import|pull|copy|transfer|offload|back ?up)\b", t):
+        return plan("glasses", ["sync"], "syncing your glasses")
+    if re.search(r"\bglasses\b.*\b(?:battery|status|stored|on them)\b|\bhow are (?:my |the )?glasses\b", t):
+        return plan("glasses", ["status"], "checking your glasses")
+    if re.search(r"\b(?:use|switch to|listen (?:through|with)) (?:my |the )?glasses\b|\bglasses (?:mic|ears) on\b", t):
+        return plan("glasses", ["ears", "on"], "switching to your glasses")
+    if re.search(r"\b(?:stop using|switch off|leave) (?:my |the )?glasses\b|\bglasses (?:mic|ears) off\b|\bglasses (?:to )?music mode\b", t):
+        return plan("glasses", ["ears", "off"], "back to music mode")
+    return None
+
+
+def _glasses(args):
+    """Run overlay/glasses.py on the system python (it needs BlueZ via python3-gi)."""
+    py = "/usr/bin/python3" if os.path.exists("/usr/bin/python3") else "python3"
+    r = subprocess.run([py, GLASSES, *args], capture_output=True, text=True, timeout=45)
+    for line in reversed(r.stdout.strip().splitlines()):
+        try:
+            return json.loads(line).get("msg") or "done"
+        except ValueError:
+            continue
+    return "the glasses didn't answer"
+
+
 def resolve(text):
     import soul
     small = soul.match(text)                      # small talk first: "thank you" would be stripped by clean(), "who are you" would reach the brain
@@ -408,6 +464,9 @@ def resolve(text):
     fu = soul.followup(t)                         # "and tomorrow?" after a forecast, "say that again"
     if fu:
         return plan("soul", None, fu[1]) if fu[0] == "repeat" else plan("weather", fu[1], "checking the weather")
+    g = glasses_intent(t)                         # smart glasses (overlay/glasses.py) before anything else
+    if g:
+        return g
     act = power_action(t)
     if act and not __import__("config").get("security", "voice_power", True):
         return plan("say", msg="voice power commands are switched off. Use the hub instead")
@@ -796,6 +855,8 @@ def execute(p):
             _popen(["xdg-open", memory.open_uri()]) if handler else _open_path(memory.vault())
         elif k == "office":
             msg = _open_office() or msg
+        elif k == "glasses":
+            msg = _glasses(a)
         elif k == "power":
             if not _first_runnable(POWER[a]):
                 return "I couldn't do that on this system", None
