@@ -1063,6 +1063,71 @@ html.pw-low{--pw:var(--red);--pw-lo:color-mix(in srgb,var(--red) 66%,var(--ink))
 html.pw-plugged #pwr .bar>i{background:linear-gradient(90deg,rgba(244,248,251,.35),#f4f8fb);box-shadow:0 0 10px rgba(244,248,251,.5)}
 html.pw-low #pwr .bar>i{background:linear-gradient(90deg,#7a1f22,var(--red));box-shadow:0 0 10px rgba(229,72,77,.6)}
 
+
+/* ============================================================
+   IRON MAN LAYER (core/iron.js) — radar, alert mode, depth, live micro-text, comms.
+   Nothing here loops: see the cost rules at the top of iron.js.
+   ============================================================ */
+/* 1. radar around the reactor */
+.radar{position:absolute;left:600px;top:240px;width:720px;height:720px;z-index:2;pointer-events:none;overflow:visible;
+  transition:opacity .25s ease-out}
+.radar .rr circle{fill:none;stroke:rgb(var(--ice-rgb)/.08);stroke-width:1;stroke-dasharray:2 7}
+.radar .rk{font-family:var(--font-mono);font-size:11px;letter-spacing:3px;fill:var(--label)}
+.radar .sweep{opacity:0;transform-origin:0 0}
+.radar .sweep path{fill:url(#radar-sweep-fill);fill:rgb(var(--ice-rgb)/.10)}
+.radar .sweep.go{animation:radarSweep 1.6s var(--ease-exit) 1}
+@keyframes radarSweep{0%{opacity:.9;transform:rotate(-90deg)}85%{opacity:.6}100%{opacity:0;transform:rotate(270deg)}}
+.radar .blip{pointer-events:auto;cursor:default;opacity:0;animation:blipIn .5s ease-out forwards;animation-delay:var(--d,0ms)}
+@keyframes blipIn{to{opacity:1}}
+.radar .blip path{fill:none;stroke:var(--ice);stroke-width:1.4}
+.radar .blip.mine path,.radar .blip.bt.on path{fill:var(--ice-bright);stroke:var(--ice-bright)}
+.radar .blip.open path{stroke:var(--gold)}
+.radar .blip.bt:not(.on){opacity:.55}
+.radar .blip .ring{fill:none;stroke:rgb(var(--ice-bright-rgb)/.6);stroke-width:1}
+.radar .blip text{font-family:var(--font-mono);font-size:11px;letter-spacing:.5px;fill:var(--paper)}
+.radar .blip.bt text{fill:var(--label)}
+.radar .blip.mine text{fill:var(--ice-bright)}
+/* the radar steps aside for the menu and for Rayo's answer cards */
+.stage:has(.hubmenu.open) .radar,html.rv-answer .radar{opacity:0}
+
+/* 2. alert mode: a frame, a panel and a one-off shockwave from the reactor */
+html.alert-red{--al:var(--red)} html.alert-gold{--al:var(--gold)}
+.alertframe,.alertpanel,.shock{pointer-events:none}
+.alertframe{position:absolute;inset:18px;z-index:1;opacity:0;transition:opacity .2s var(--ease-exit)}
+.alertframe i{position:absolute;width:90px;height:90px;border:2px solid var(--al,var(--red));filter:none;
+  box-shadow:0 0 18px color-mix(in srgb,var(--al,var(--red)) 45%,transparent)}
+.alertframe i:nth-child(1){left:0;top:0;border-right:0;border-bottom:0}
+.alertframe i:nth-child(2){right:0;top:0;border-left:0;border-bottom:0}
+.alertframe i:nth-child(3){left:0;bottom:0;border-right:0;border-top:0}
+.alertframe i:nth-child(4){right:0;bottom:0;border-left:0;border-top:0}
+html.alert-mode .alertframe{opacity:1;transition:opacity .4s ease-out}
+.alertpanel{position:absolute;left:50%;top:84px;z-index:6;min-width:560px;max-width:900px;padding:12px 22px 14px;border-radius:14px;
+  background:rgba(12,10,12,.86);border:1px solid var(--al,var(--red));box-shadow:0 14px 40px rgba(0,0,0,.55),0 0 26px color-mix(in srgb,var(--al,var(--red)) 30%,transparent);
+  font-family:var(--font-mono);opacity:0;visibility:hidden;transform:translateX(-50%) scale(.9);
+  transition:opacity var(--dur-exit) var(--ease-exit),transform var(--dur-exit) var(--ease-exit),visibility 0s linear var(--dur-exit)}
+html.alert-mode .alertpanel{opacity:1;visibility:visible;transform:translateX(-50%) scale(1);
+  transition:opacity .2s ease-out,transform var(--dur-bounce) var(--spring-bounce),visibility 0s}
+.ap-k{font-size:11px;letter-spacing:5px;color:var(--al,var(--red));margin-bottom:8px}
+.ap-row{display:flex;gap:14px;align-items:baseline;font-size:14px;line-height:1.5;color:var(--paper);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ap-tag{font-size:11px;letter-spacing:2px;min-width:86px}
+.ap-row.red .ap-tag{color:var(--red)} .ap-row.gold .ap-tag{color:var(--gold)}
+.shock{position:absolute;left:960px;top:600px;width:440px;height:440px;margin:-220px 0 0 -220px;border-radius:50%;z-index:1;
+  border:2px solid var(--al,var(--red));opacity:0}
+html.alert-mode .shock{animation:shock 1.1s ease-out 1}
+@keyframes shock{0%{opacity:.9;transform:scale(.5)}100%{opacity:0;transform:scale(1.9)}}
+@media (prefers-reduced-motion:reduce){html.alert-mode .shock{animation:none}.radar .sweep.go{animation:none}}
+
+/* 4. live micro-text on the reactor's compass marks */
+.reactor .cardinal{color:var(--ice);opacity:.85;font-size:12px;white-space:nowrap}
+
+/* 5. comms: a waveform while Rayo listens or speaks */
+.comms{position:absolute;left:50%;top:930px;transform:translateX(-50%);z-index:4;width:520px;text-align:center;pointer-events:none;
+  opacity:0;visibility:hidden;transition:opacity var(--dur-exit) var(--ease-exit),visibility 0s linear var(--dur-exit)}
+html:is(.rv-listening,.rv-thinking,.rv-speaking,.rv-answer) .comms{opacity:1;visibility:visible;transition:opacity .25s ease-out,visibility 0s}
+.comms-k{font-family:var(--font-mono);font-size:11px;letter-spacing:4px;color:var(--ice);margin-bottom:8px}
+.comms-bars{display:flex;gap:4px;justify-content:center;align-items:center;height:34px}
+.comms-bars i{display:block;width:5px;height:34px;border-radius:2px;background:linear-gradient(var(--ice-bright),var(--ice-deep));
+  transform:scaleY(.08);transform-origin:center;transition:transform .12s ease-out;opacity:.9}
 </style>
 <script src="core/obs-fix.js"></script>
 </head>
@@ -1141,6 +1206,18 @@ html.pw-low #pwr .bar>i{background:linear-gradient(90deg,#7a1f22,var(--red));box
     </svg>
     <div class="hub-hit" id="hub-hit" title="click: menu  ·  double-click: bench  ·  triple-click: shut down"></div>
   </div>
+
+  <!-- IRON MAN LAYER (core/iron.js): radar, alert mode, comms -->
+  <svg class="radar" id="radar" viewBox="-360 -360 720 720" aria-label="Wi-Fi networks and Bluetooth devices around you">
+    <g class="rr"><circle r="250"/><circle r="295"/><circle r="340"/></g>
+    <g class="sweep" id="radar-sweep"><path d="M0 0 L340 0 A340 340 0 0 1 294.45 170 Z"/></g>
+    <g id="radar-blips"></g>
+    <text class="rk" id="radar-k" x="0" y="-348" text-anchor="middle">SURROUNDINGS</text>
+  </svg>
+  <div class="alertframe" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+  <div class="shock" aria-hidden="true"></div>
+  <div class="alertpanel" id="alertpanel" role="alert"></div>
+  <div class="comms" id="comms" aria-hidden="true"><div class="comms-k" id="comms-k">COMMS · STANDBY</div><div class="comms-bars" id="comms-bars"></div></div>
 
   <div class="vcap" id="vcap"><div class="said"></div><div class="res"></div></div>
 
@@ -1298,6 +1375,7 @@ html.pw-low #pwr .bar>i{background:linear-gradient(90deg,#7a1f22,var(--red));box
 <script src="core/voice.js"></script>
 <script src="core/control.js"></script>
 <script src="core/calm.js"></script>
+<script src="core/iron.js"></script>
 <script type="module" src="core/reactor3d.js"></script>
 </body>
 </html>

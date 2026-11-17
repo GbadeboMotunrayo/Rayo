@@ -49,6 +49,7 @@ import * as THREE from '../vendor/three/three.module.min.js';
           hi: tok('--ice-hi', '#e9f9ff'), abyss: tok('--ice-abyss', '#0c3b49') };
   }
   readColours();
+  let lastTok = getComputedStyle(root).getPropertyValue('--ice').trim() + getComputedStyle(root).getPropertyValue('--ice-bright').trim();
 
   // ---- rings: a faint full band + a bright arc whose head leads the spin -----
   const arcMat = (head) => new THREE.ShaderMaterial({
@@ -188,7 +189,11 @@ import * as THREE from '../vendor/three/three.module.min.js';
 
   // restart when calm / idle ends or voice changes; recolour on a theme change
   new MutationObserver((list) => {
-    for (const m of list) if (m.attributeName === 'data-theme' || m.attributeName === 'style') { recolour(); break; }
+    // the voice level also writes to <html style> ~20×/s: only recolour when a colour token really changed
+    if (list.some((m) => m.attributeName === 'data-theme' || m.attributeName === 'style')) {
+      const now = getComputedStyle(root).getPropertyValue('--ice').trim() + getComputedStyle(root).getPropertyValue('--ice-bright').trim();
+      if (now !== lastTok) { lastTok = now; recolour(); }
+    }
     if (/\brv-/.test(root.className)) lastInput = performance.now();
     start();
   }).observe(root, { attributes: true, attributeFilter: ['class', 'data-theme', 'style'] });

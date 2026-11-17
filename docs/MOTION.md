@@ -118,7 +118,21 @@ After a quiet minute (`core/calm.js`) the page adds `html.rayo-calm`: **every lo
 - **Turning dials were removed on 17 Nov.** A once-a-second tick looked laggy on the desktop, smooth rotation costs too much, and a 2D canvas only ever shows its first frame on the real overlay window. The clock and weather rings stay still. Ring images rotated with a CSS transform did move on the real window (proven by window snapshots), if this is ever revisited.
 - **Power colours:** `html.pw-charging`, `.pw-plugged`, `.pw-battery` and `.pw-low` come from `stats.py` `power`. Every letter takes `--pw`, labels take `--pw-lo`, and the power bar matches. No colour transitions: they would replace the elements' own transition lists.
 
-## 10. Checking a change
+## 10. The Iron Man layer (core/iron.js, 17 Nov 2026)
+
+These follow the Iron Man HUD designers' principles: the HUD is a character, it has modes, nothing is decorative, elements sit at different depths, and a radar shows what's around you. Nothing in the layer loops.
+
+| Feature | What it does | When it costs anything |
+|---|---|---|
+| Radar | SVG blips for Wi-Fi (NetworkManager's existing scan) and known Bluetooth devices | A redraw only when the data changes (every 30 s), with one sweep |
+| Alert mode | `html.alert-mode`: corner brackets, a panel and a one-off shockwave | Animates only on entry |
+| Depth | Side clusters drift with the pointer (`translate`, 3–9 px by layer) | Only while the pointer moves |
+| Micro-text | The compass marks show CPU temperature, download, battery and uptime | Text updates once a second |
+| Comms | A 32-bar waveform from `rayo:level` | Only while voice is active |
+
+**Measured:** about 29% of a core before and about 30% with the layer; the extra is mostly the radar's entrance at start. Proven on the real overlay window with a snapshot.
+
+## 11. Checking a change
 
 1. `./run.sh` and open `http://localhost:8099`. Click the hub once, twice and three times. Press **Esc** to cancel the countdown.
 2. Check all four themes (`?theme=rayo|cyberpunk|cyborg|tron`).

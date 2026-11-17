@@ -20,6 +20,7 @@
     const L = Math.max(0, Math.min(1, +v || 0));
     root.style.setProperty('--vs', (1 + L * 0.14).toFixed(3));   // spectrum ring flares
     root.style.setProperty('--vo', (1 + L * 0.07).toFixed(3));   // core breathes
+    window.dispatchEvent(new CustomEvent('rayo:level', { detail: L }));   // iron.js comms waveform
   }
   function caption(said, res, err, hold = 3200, asking = false, talking = false) {
     const c = $('vcap'); if (!c) return;

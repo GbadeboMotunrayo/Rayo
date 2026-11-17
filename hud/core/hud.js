@@ -312,6 +312,7 @@
     updateGauge(d.fan, d.fan_max, d.fan_label, d.cpu_temp);
 
     renderStatus(d); renderOffice(d.office); renderNext(d.next_event);
+    window.dispatchEvent(new CustomEvent('rayo:data', { detail: d }));   // iron.js: radar, alert mode, micro-text
 
     // hub reacts to CPU load by pulsing faster/brighter
     const pulse = (3 - cpu / 100 * 1.6).toFixed(2) + 's';

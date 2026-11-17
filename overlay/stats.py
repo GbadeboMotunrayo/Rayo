@@ -508,6 +508,58 @@ def _office_notify(need, gw, names, port):
         pass
 
 
+# SURROUNDINGS (the radar): Wi-Fi networks in range, from NetworkManager's existing
+# scan (no new scan, ~0.05 s), and the Bluetooth devices this laptop knows, with
+# whether each is connected. Every 30 s. Local only: nothing leaves the laptop.
+_near = {}
+def _nm_split(line):
+    r"""nmcli -t escapes ':' inside fields as '\:'."""
+    out, cur, esc = [], "", False
+    for ch in line:
+        if esc:
+            cur += ch; esc = False
+        elif ch == "\\":
+            esc = True
+        elif ch == ":":
+            out.append(cur); cur = ""
+        else:
+            cur += ch
+    out.append(cur)
+    return out
+
+def _check_near():
+    wifi = []
+    if shutil.which("nmcli"):
+        try:
+            r = subprocess.run(["nmcli", "-t", "-f", "IN-USE,SIGNAL,SECURITY,SSID", "dev", "wifi", "list", "--rescan", "no"],
+                               capture_output=True, text=True, timeout=8)
+            seen = set()
+            for line in r.stdout.splitlines():
+                f = _nm_split(line)
+                if len(f) < 4 or not f[3] or f[3] in seen:
+                    continue
+                seen.add(f[3])
+                wifi.append({"name": f[3][:32], "signal": int(f[1]) if f[1].isdigit() else 0,
+                             "open": not f[2].strip(), "mine": f[0].strip() == "*"})
+        except (OSError, subprocess.TimeoutExpired):
+            pass
+    bt = []
+    if shutil.which("bluetoothctl"):
+        try:
+            r = subprocess.run(["bluetoothctl", "devices"], capture_output=True, text=True, timeout=5, stdin=subprocess.DEVNULL)
+            for line in r.stdout.splitlines()[:12]:
+                m = re.match(r"Device ([0-9A-F:]{17}) (.+)", line.strip())
+                if not m:
+                    continue
+                info = subprocess.run(["bluetoothctl", "info", m.group(1)], capture_output=True, text=True,
+                                      timeout=4, stdin=subprocess.DEVNULL).stdout
+                bt.append({"name": m.group(2)[:28], "connected": "Connected: yes" in info})
+        except (OSError, subprocess.TimeoutExpired):
+            pass
+    wifi.sort(key=lambda w: -w["signal"])
+    return {"near": {"wifi": wifi[:12], "bt": bt, "at": int(time.time())}}
+
+
 # NEXT EVENT: the GNOME calendar store (Evolution data server), read straight
 # from its files, every 5 min. Empty until a calendar is added in Settings →
 # Online Accounts. One-off events only: repeating events are skipped for now.
@@ -623,6 +675,7 @@ def start_checks():
     _every(900, _check_threat, _threat)
     _every(30, _check_office, _office)
     _every(300, _check_calendar, _cal)
+    _every(30, _check_near, _near)
 
 
 # SYS: one honest word for the machine, from this tick's readings
@@ -669,7 +722,7 @@ def sample():
         "cpu_temp": temp,
         "sys_state": sys_state(cpu, mem_p, temp, batt, charging),
         "link": link_state(iface),
-        **_threat, **_office, **_cal,
+        **_threat, **_office, **_cal, **_near,
         "down": down, "up": up, "signal": signal,
         "month_bytes": monthly_usage(iface), "year_bytes": _usage["year_bytes"], "year_since": _usage["year_since"],
         "ssid": ssid or iface or "—", "iface": iface,
