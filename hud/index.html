@@ -1063,13 +1063,6 @@ html.pw-low{--pw:var(--red);--pw-lo:color-mix(in srgb,var(--red) 66%,var(--ink))
 html.pw-plugged #pwr .bar>i{background:linear-gradient(90deg,rgba(244,248,251,.35),#f4f8fb);box-shadow:0 0 10px rgba(244,248,251,.5)}
 html.pw-low #pwr .bar>i{background:linear-gradient(90deg,#7a1f22,var(--red));box-shadow:0 0 10px rgba(229,72,77,.6)}
 
-/* ============================================================
-   LIVING DIALS — the clock's and the weather orb's rings turn (core/dials.js).
-   Each ring is pre-rendered once into an image and turned with a CSS rotation
-   once a second; rotating the masked CSS rings themselves cost ~33% of a core.
-   ============================================================ */
-.dial-ring{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;will-change:transform}
-.cring.dial-off{display:none}
 </style>
 <script src="core/obs-fix.js"></script>
 </head>
@@ -1305,7 +1298,6 @@ html.pw-low #pwr .bar>i{background:linear-gradient(90deg,#7a1f22,var(--red));box
 <script src="core/voice.js"></script>
 <script src="core/control.js"></script>
 <script src="core/calm.js"></script>
-<script src="core/dials.js"></script>
 <script type="module" src="core/reactor3d.js"></script>
 </body>
 </html>

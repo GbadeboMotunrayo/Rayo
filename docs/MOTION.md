@@ -115,6 +115,7 @@ After a quiet minute (`core/calm.js`) the page adds `html.rayo-calm`: **every lo
   | **Canvas ticking once a second** | **about 48%** |
 
   Prefer a once-a-second tick for anything clock-like.
+- **Turning dials were removed on 17 Nov.** A once-a-second tick looked laggy on the desktop, smooth rotation costs too much, and a 2D canvas only ever shows its first frame on the real overlay window. The clock and weather rings stay still. Ring images rotated with a CSS transform did move on the real window (proven by window snapshots), if this is ever revisited.
 - **Power colours:** `html.pw-charging`, `.pw-plugged`, `.pw-battery` and `.pw-low` come from `stats.py` `power`. Every letter takes `--pw`, labels take `--pw-lo`, and the power bar matches. No colour transitions: they would replace the elements' own transition lists.
 
 ## 10. Checking a change
