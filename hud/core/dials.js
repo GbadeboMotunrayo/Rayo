@@ -2,8 +2,10 @@
    Living dials — the clock's and the weather orb's rings turn.
    Rotating the CSS rings (masked conic gradients) made the software renderer
    recompute the masks every step: measured ~50% -> ~83% of a core. Here each
-   ring is drawn ONCE into a small bitmap, and every frame just draws those
-   bitmaps rotated onto one canvas per dial. Same look, a fraction of the cost.
+   ring is drawn ONCE into a small image, and each tick just turns that image
+   with a plain CSS rotation. (A first version redrew a 2D canvas each tick: it
+   worked in test renders, but the desktop overlay window only ever showed the
+   canvas's first frame. CSS transforms always reach the screen.)
    They TICK once a second, like a watch: 10 updates a second still cost ~+20% of
    a core (measured), one a second costs almost nothing. The clock's outer ring
    is a real seconds ring, in step with the wall clock. They keep ticking in calm
@@ -47,32 +49,31 @@
   }
 
   function build() {
-    dials.forEach((d) => d.canvas.remove()); dials.length = 0;
+    dials.forEach((d) => d.rings.forEach((r) => r.img.remove())); dials.length = 0;
     for (const sel of ['.clock', '.worb']) {
       const box = document.querySelector('.stage ' + sel); if (!box) continue;
       const rings = SPIN.filter((s) => s[0] === sel).map(([, n, secs, dir]) => ({ el: box.children[n - 1], secs, dir }))
         .filter((r) => r.el && r.el.classList.contains('cring'));
       if (!rings.length) continue;
-      const canvas = document.createElement('canvas');
-      canvas.className = 'dial-canvas'; canvas.setAttribute('aria-hidden', 'true');
-      box.insertBefore(canvas, box.querySelector('.face'));
       const b = box.getBoundingClientRect();
       const px = Math.max(32, Math.round(Math.max(b.width, b.height) * Math.min(devicePixelRatio || 1, 1.5)));
-      canvas.width = canvas.height = px;
-      rings.forEach((r) => { r.bmp = ringBitmap(r.el, px); r.el.classList.add('dial-off'); });
-      dials.push({ canvas, ctx: canvas.getContext('2d'), rings, px });
+      const face = box.querySelector('.face');
+      rings.forEach((r) => {
+        r.img = new Image(); r.img.className = 'dial-ring'; r.img.alt = ''; r.img.setAttribute('aria-hidden', 'true');
+        r.img.src = ringBitmap(r.el, px).toDataURL('image/png');
+        box.insertBefore(r.img, face);
+        r.el.classList.add('dial-off');
+      });
+      dials.push({ rings });
     }
     draw();
   }
 
   function draw() {
     const t = Math.floor(Date.now() / 1000);                     // whole seconds: a tick, in step with the clock
-    for (const d of dials) {
-      const g = d.ctx, m = d.px / 2;
-      g.clearRect(0, 0, d.px, d.px);
-      for (const r of d.rings) {
-        g.save(); g.translate(m, m); g.rotate(r.dir * t / r.secs * Math.PI * 2); g.drawImage(r.bmp, -m, -m); g.restore();
-      }
+    for (const d of dials) for (const r of d.rings) {
+      const deg = ((r.dir * t / r.secs) % 1) * 360;
+      r.img.style.transform = `rotate(${deg.toFixed(2)}deg)`;
     }
   }
 
