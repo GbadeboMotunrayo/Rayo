@@ -6,13 +6,13 @@
 
    1. RADAR      real Wi-Fi networks and Bluetooth devices around the reactor
    2. ALERT MODE the HUD switches mode when something serious needs you
-   3. DEPTH      side clusters drift with the pointer, at different depths
+   3. DEPTH      (removed 18 Nov: only the reactor follows the pointer)
    4. MICRO-TEXT the reactor's compass marks become live readouts
    5. COMMS      a JARVIS-style waveform panel while Rayo listens or speaks
 
    Cost rules (docs/MOTION.md): nothing here loops. The radar redraws only when
    its data changes (every 30 s) with one sweep; alert mode animates only on
-   entry; depth moves only while the pointer moves; the waveform runs only while
+   entry; the waveform runs only while
    voice is active. Everything that moves uses CSS transforms or SVG, which reach
    the real overlay window (a 2D canvas does not: see MOTION.md §9).
    ============================================================ */
@@ -26,12 +26,13 @@
   // ---------------------------------------------------------------- 1. RADAR
   const radar = $('radar'), blips = $('radar-blips'), sweep = $('radar-sweep'), rk = $('radar-k');
   let nearSig = '';
-  // stable angle per name, kept out of the bottom sector where the brief and captions live
-  function angleFor(name) {
-    let h = 2166136261; for (const c of name) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619) >>> 0; }
-    const t = (h % 10000) / 10000;                       // 0..1
-    // SVG angles run clockwise from 3 o'clock, so the bottom is 90°: use 120°..420°, a 60° gap at the bottom
-    return (120 + t * 300) * Math.PI / 180;
+  // Two tidy arcs, like the side readouts of a helmet HUD: Wi-Fi on the LEFT (strongest
+  // at the top), Bluetooth on the RIGHT (connected first). One distance, even spacing,
+  // so labels never pile up. SVG angles run clockwise from 3 o'clock: 180° is left, 0° right.
+  const R = 300, STEP = 14, MAXSPAN = 76;
+  function arc(n, centre, dir) {           // dir -1: list runs top→bottom on the left (angles decreasing)
+    const span = Math.min(MAXSPAN, (n - 1) * STEP);
+    return Array.from({ length: n }, (_, k) => (centre + dir * (n === 1 ? 0 : -span / 2 + k * span / (n - 1))) * Math.PI / 180);
   }
   function drawRadar(near) {
     if (!radar || !near) return;
@@ -39,25 +40,35 @@
     if (sig === nearSig) return;
     nearSig = sig;
     blips.textContent = '';
-    const wifi = near.wifi || [], bt = near.bt || [];
+    const wifi = [...(near.wifi || [])].sort((a, b) => b.signal - a.signal);
+    const bt = [...(near.bt || [])].sort((a, b) => (b.connected - a.connected) || a.name.localeCompare(b.name));
     const items = [
-      ...wifi.map((w) => ({ kind: 'wifi', name: w.name, r: 338 - Math.max(0, Math.min(100, w.signal)) * 0.9, w })),
-      ...bt.map((b) => ({ kind: 'bt', name: b.name, r: b.connected ? 252 : 318, b })),
+      ...arc(wifi.length, 180, -1).map((a, k) => ({ kind: 'wifi', a, w: wifi[k], name: wifi[k].name, right: false })),
+      ...arc(bt.length, 0, 1).map((a, k) => ({ kind: 'bt', a, b: bt[k], name: bt[k].name, right: true })),
     ];
     items.forEach((it, i) => {
-      const a = angleFor(it.kind + it.name), x = Math.cos(a) * it.r, y = Math.sin(a) * it.r;
+      const x = Math.cos(it.a) * R, y = Math.sin(it.a) * R;
       const g = el('g', { class: `blip ${it.kind}` + (it.w && it.w.mine ? ' mine' : '') + (it.w && it.w.open ? ' open' : '') + (it.b && it.b.connected ? ' on' : ''), transform: `translate(${x.toFixed(1)} ${y.toFixed(1)})` }, blips);
-      g.style.setProperty('--d', `${(i * 70)}ms`);
+      g.style.setProperty('--d', `${(i * 60)}ms`);
       el('title', {}, g).textContent = it.kind === 'wifi'
         ? `Wi-Fi · ${it.name} · signal ${it.w.signal}%${it.w.mine ? ' · connected' : ''}${it.w.open ? ' · open (no password)' : ''}`
         : `Bluetooth · ${it.name} · ${it.b.connected ? 'connected' : 'known, not connected'}`;
       if (it.kind === 'wifi') el('path', { d: 'M0 -6 L6 0 L0 6 L-6 0 Z' }, g);
       else el('path', { d: 'M0 -6 L5.5 4.5 L-5.5 4.5 Z' }, g);
       if (it.w && it.w.mine) el('circle', { r: 11, class: 'ring' }, g);
-      const right = x >= 0, t = el('text', { x: right ? 12 : -12, y: 4, 'text-anchor': right ? 'start' : 'end' }, g);
-      t.textContent = it.kind === 'wifi' ? `${it.name.slice(0, 18)} ${it.w.signal}%` : it.name.slice(0, 18);
+      const t = el('text', { x: it.right ? 14 : -14, y: 4, 'text-anchor': it.right ? 'start' : 'end' }, g);
+      t.textContent = it.kind === 'wifi' ? `${it.name.slice(0, 20)}  ${it.w.signal}%` : `${it.name.slice(0, 20)}${it.b.connected ? '  ●' : ''}`;
     });
-    if (rk) rk.textContent = `SURROUNDINGS · ${wifi.length} WI-FI · ${bt.filter((b) => b.connected).length}/${bt.length} BLUETOOTH`;
+    // each side's header sits just above its list's first item
+    const set = (id, txt, list) => {
+      const n = $(id); if (!n) return;
+      n.textContent = txt;
+      const top = list.length ? Math.min(...list.map((it) => Math.sin(it.a) * R)) : -60;
+      n.setAttribute('y', (top - 34).toFixed(0));
+    };
+    set('radar-kl', `WI-FI · ${wifi.length}`, items.filter((it) => it.kind === 'wifi'));
+    set('radar-kr', `BLUETOOTH · ${bt.filter((b) => b.connected).length}/${bt.length} ON`, items.filter((it) => it.kind === 'bt'));
+    if (rk) rk.textContent = 'SURROUNDINGS';
     // one sweep per refresh (an event, not a loop)
     if (sweep) { sweep.classList.remove('go'); void sweep.getBoundingClientRect(); sweep.classList.add('go'); }
   }
@@ -91,21 +102,7 @@
   }
 
   // ---------------------------------------------------------------- 3. DEPTH
-  // farther layers move less: top strip 3px, side clusters 9px, wordmark/status 5px
-  const LAYERS = [
-    ['.topstrip', 3], ['.clock', 9], ['.vitals', 9], ['#pwr', 9], ['.netblk', 7], ['.baseline', 5],
-    ['.worb', 9], ['.launch', 9], ['.office', 9], ['.powerbtns', 7], ['.status', 5], ['.cooling', 4],
-  ].map(([sel, k]) => [document.querySelector('.stage ' + sel), k]).filter(([n]) => n);
-  let px = 0, py = 0, pending = false;
-  function applyDepth() {
-    pending = false;
-    for (const [n, k] of LAYERS) n.style.translate = `${(-px * k).toFixed(1)}px ${(-py * k * 0.6).toFixed(1)}px`;
-  }
-  addEventListener('pointermove', (e) => {
-    px = (e.clientX / innerWidth - 0.5) * 2; py = (e.clientY / innerHeight - 0.5) * 2;
-    if (!pending) { pending = true; requestAnimationFrame(applyDepth); }
-  }, { passive: true });
-  document.documentElement.addEventListener('pointerleave', () => { px = py = 0; requestAnimationFrame(applyDepth); });
+  // Removed on 18 Nov at MG's request: only the reactor follows the pointer (reactor3d.js).
 
   // ---------------------------------------------------------------- 4. MICRO-TEXT
   const fmtK = (b) => (b < 1024 ? `${Math.round(b)}B` : b < 1048576 ? `${(b / 1024).toFixed(1)}K` : `${(b / 1048576).toFixed(1)}M`);

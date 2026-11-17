@@ -1073,6 +1073,7 @@ html.pw-low #pwr .bar>i{background:linear-gradient(90deg,#7a1f22,var(--red));box
   transition:opacity .25s ease-out}
 .radar .rr circle{fill:none;stroke:rgb(var(--ice-rgb)/.08);stroke-width:1;stroke-dasharray:2 7}
 .radar .rk{font-family:var(--font-mono);font-size:11px;letter-spacing:3px;fill:var(--label)}
+.radar .rk.side{fill:var(--ice);letter-spacing:2.5px}
 .radar .sweep{opacity:0;transform-origin:0 0}
 .radar .sweep path{fill:url(#radar-sweep-fill);fill:rgb(var(--ice-rgb)/.10)}
 .radar .sweep.go{animation:radarSweep 1.6s var(--ease-exit) 1}
@@ -1213,6 +1214,8 @@ html:is(.rv-listening,.rv-thinking,.rv-speaking,.rv-answer) .comms{opacity:1;vis
     <g class="sweep" id="radar-sweep"><path d="M0 0 L340 0 A340 340 0 0 1 294.45 170 Z"/></g>
     <g id="radar-blips"></g>
     <text class="rk" id="radar-k" x="0" y="-348" text-anchor="middle">SURROUNDINGS</text>
+    <text class="rk side" id="radar-kl" x="-262" y="-150" text-anchor="end">WI-FI</text>
+    <text class="rk side" id="radar-kr" x="262" y="-150" text-anchor="start">BLUETOOTH</text>
   </svg>
   <div class="alertframe" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
   <div class="shock" aria-hidden="true"></div>

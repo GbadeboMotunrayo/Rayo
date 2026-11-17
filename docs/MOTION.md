@@ -126,7 +126,7 @@ These follow the Iron Man HUD designers' principles: the HUD is a character, it 
 |---|---|---|
 | Radar | SVG blips for Wi-Fi (NetworkManager's existing scan) and known Bluetooth devices | A redraw only when the data changes (every 30 s), with one sweep |
 | Alert mode | `html.alert-mode`: corner brackets, a panel and a one-off shockwave | Animates only on entry |
-| Depth | Side clusters drift with the pointer (`translate`, 3–9 px by layer) | Only while the pointer moves |
+| Depth | **Removed 18 Nov at MG's request**: only the reactor follows the pointer | — |
 | Micro-text | The compass marks show CPU temperature, download, battery and uptime | Text updates once a second |
 | Comms | A 32-bar waveform from `rayo:level` | Only while voice is active |
 
