@@ -6,8 +6,9 @@
    bitmaps rotated onto one canvas per dial. Same look, a fraction of the cost.
    They TICK once a second, like a watch: 10 updates a second still cost ~+20% of
    a core (measured), one a second costs almost nothing. The clock's outer ring
-   is a real seconds ring, in step with the wall clock. Stops in calm mode, when
-   covered, or hidden.
+   is a real seconds ring, in step with the wall clock. They keep ticking in calm
+   mode (a clock whose seconds ring stops looks broken, and one tick a second is
+   nearly free); they stop only when the desktop is covered or the page hidden.
    Colours come from the theme tokens and follow a theme change.
    ============================================================ */
 (() => {
@@ -76,7 +77,7 @@
   }
 
   let raf = 0, last = 0;
-  const stopped = () => document.hidden || root.classList.contains('rayo-calm') || root.classList.contains('rayo-idle');
+  const stopped = () => document.hidden || root.classList.contains('rayo-idle');
   function frame(now) {
     raf = 0;
     if (stopped()) return;
