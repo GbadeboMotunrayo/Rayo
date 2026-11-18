@@ -1129,6 +1129,58 @@ html:is(.rv-listening,.rv-thinking,.rv-speaking,.rv-answer) .comms{opacity:1;vis
 .comms-bars{display:flex;gap:4px;justify-content:center;align-items:center;height:34px}
 .comms-bars i{display:block;width:5px;height:34px;border-radius:2px;background:linear-gradient(var(--ice-bright),var(--ice-deep));
   transform:scaleY(.08);transform-origin:center;transition:transform .12s ease-out;opacity:.9}
+
+/* ============================================================
+   STARTUP SEQUENCE — plays once when Rayo starts (~4 s), in the theme's colours.
+   Dark → the core ignites and the rings grow out → "RAYO" → a scan line sweeps
+   down → the HUD powers up cluster by cluster → the radar comes on.
+   Pure CSS. The HUD's animations use fill "backwards": they hold the hidden start
+   only while waiting, then hand back to the normal styles (so the reactor's voice
+   moves, the radar's menu fade etc. keep working). If anything failed, the HUD
+   would simply be there. Nothing keeps running afterwards. If Rayo starts behind
+   windows, the overlay pauses animations, so the sequence waits until you see it.
+   Reduced motion: the global rule shortens it to nothing.
+   ============================================================ */
+@keyframes bootCore{0%{opacity:0;scale:.18}35%{opacity:1;scale:.32}70%{scale:1.05}100%{opacity:1;scale:1}}
+@keyframes bootIn{0%{opacity:0;translate:var(--bx,0) var(--by,0)}100%{opacity:1;translate:0 0}}
+@keyframes bootFade{0%{opacity:0}100%{opacity:1}}
+@keyframes bootMark{0%{opacity:0;letter-spacing:4px;visibility:visible}25%{opacity:1;letter-spacing:22px}
+  78%{opacity:1;letter-spacing:26px}100%{opacity:0;letter-spacing:30px;visibility:hidden}}
+@keyframes bootSub{0%,20%{opacity:0;visibility:visible}40%,78%{opacity:1}100%{opacity:0;visibility:hidden}}
+@keyframes bootScan{0%{opacity:0;transform:translateY(0);visibility:visible}8%{opacity:1}92%{opacity:.8}
+  100%{opacity:0;transform:translateY(1200px);visibility:hidden}}
+.stage > .reactor{animation:bootCore 1.25s cubic-bezier(.2,.8,.2,1) .15s backwards}
+.bootmark{position:absolute;left:50%;top:600px;transform:translate(-50%,-50%);z-index:30;pointer-events:none;text-align:center;
+  font-family:var(--font-mono);white-space:nowrap;visibility:hidden}
+.bootmark b{display:block;font-size:56px;font-weight:800;color:var(--ice-hi);text-shadow:0 0 24px rgb(var(--ice-rgb)/.9),0 0 60px rgb(var(--ice-rgb)/.5);
+  animation:bootMark 1.7s ease-out .95s both}
+.bootmark span{display:block;margin-top:14px;font-size:13px;letter-spacing:6px;color:var(--ice-bright);
+  animation:bootSub 1.7s ease-out .95s both}
+.bootscan{position:absolute;left:0;right:0;top:0;height:3px;z-index:29;pointer-events:none;visibility:hidden;
+  background:linear-gradient(90deg,transparent,rgb(var(--ice-rgb)/.85) 20%,var(--ice-hi) 50%,rgb(var(--ice-rgb)/.85) 80%,transparent);
+  box-shadow:0 0 18px rgb(var(--ice-rgb)/.8),0 0 40px rgb(var(--ice-rgb)/.35);
+  animation:bootScan .9s cubic-bezier(.4,0,.6,1) 2.2s both}
+/* the HUD powers up: left side slides in from the left, right side from the right, staggered */
+.stage > :is(.topstrip,.clock,.vitals,#pwr,.netblk,.baseline,.cooling,.worb,.launch,.office,.powerbtns,.status,.brief){
+  animation:bootIn .6s var(--ease-exit) var(--bd,2.4s) backwards}
+.stage > .topstrip{--by:-18px;--bd:2.35s}
+.stage > .clock{--bx:-34px;--bd:2.45s} .stage > .vitals{--bx:-34px;--bd:2.55s} .stage > #pwr{--bx:-34px;--bd:2.65s}
+.stage > .netblk{--bx:-34px;--bd:2.75s} .stage > .baseline{--bx:-34px;--bd:2.85s}
+.stage > .worb{--bx:34px;--bd:2.5s} .stage > .launch{--bx:34px;--bd:2.6s} .stage > .office{--bx:34px;--bd:2.7s}
+.stage > .powerbtns{--bx:34px;--bd:2.8s} .stage > .status{--bx:34px;--bd:2.9s}
+.stage > .cooling{--by:22px;--bd:2.8s} .stage > .brief{--by:14px;--bd:3.0s}
+/* boot readout: the six lines are in the markup so their typing is timed from page load
+   (the scripts run ~1.4 s late in the overlay); core/boot.js only writes their text.
+   Lines type 1.0–2.55 s, the block fades 2.7–3.0 s, just before the brief arrives. */
+@keyframes bootType{from{max-width:0}to{max-width:calc(48 * (1ch + 1px))}}
+@keyframes bootLog{0%{opacity:1;visibility:visible}85%{opacity:1}100%{opacity:0;visibility:hidden}}
+.bootlog{position:absolute;left:50%;top:800px;transform:translateX(-50%);z-index:30;pointer-events:none;visibility:hidden;
+  font-family:var(--font-mono);font-size:12px;line-height:19px;letter-spacing:1px;color:rgb(var(--ice-rgb)/.75);
+  animation:bootLog 2s linear 1s both}
+.bootlog div{white-space:nowrap;overflow:hidden;width:max-content;animation:bootType .5s steps(48) var(--t,1s) both}
+.bootlog b{font-weight:600;color:var(--ice-hi)}
+.bootlog b.warn{color:var(--gold,#e8b84a)} .bootlog b.bad{color:#ff5a5a}
+.stage > .radar{animation:bootFade .7s ease-out 3.1s backwards}
 </style>
 <script src="core/obs-fix.js"></script>
 </head>
@@ -1207,6 +1259,11 @@ html:is(.rv-listening,.rv-thinking,.rv-speaking,.rv-answer) .comms{opacity:1;vis
     </svg>
     <div class="hub-hit" id="hub-hit" title="click: menu  ·  double-click: bench  ·  triple-click: shut down"></div>
   </div>
+
+  <!-- STARTUP SEQUENCE (CSS only, plays once when Rayo starts) -->
+  <div class="bootmark" aria-hidden="true"><b>RAYO</b><span>RAY ACROSS YOUR ORBIT</span></div>
+  <div class="bootscan" aria-hidden="true"></div>
+  <div class="bootlog" id="bootlog" aria-hidden="true"><div style="--t:1.00s"></div><div style="--t:1.25s"></div><div style="--t:1.50s"></div><div style="--t:1.75s"></div><div style="--t:2.00s"></div><div style="--t:2.25s"></div></div>
 
   <!-- IRON MAN LAYER (core/iron.js): radar, alert mode, comms -->
   <svg class="radar" id="radar" viewBox="-360 -360 720 720" aria-label="Wi-Fi networks and Bluetooth devices around you">
@@ -1379,6 +1436,7 @@ html:is(.rv-listening,.rv-thinking,.rv-speaking,.rv-answer) .comms{opacity:1;vis
 <script src="core/control.js"></script>
 <script src="core/calm.js"></script>
 <script src="core/iron.js"></script>
+<script src="core/boot.js"></script>
 <script type="module" src="core/reactor3d.js"></script>
 </body>
 </html>
