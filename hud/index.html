@@ -1,6 +1,7 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="boot-hold">
 <head>
+<script src="core/gate.js"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Rayo · Live HUD</title>
@@ -1149,20 +1150,14 @@ html:is(.rv-listening,.rv-thinking,.rv-speaking,.rv-answer) .comms{opacity:1;vis
 @keyframes bootSub{0%,20%{opacity:0;visibility:visible}40%,78%{opacity:1}100%{opacity:0;visibility:hidden}}
 @keyframes bootScan{0%{opacity:0;transform:translateY(0);visibility:visible}8%{opacity:1}92%{opacity:.8}
   100%{opacity:0;transform:translateY(1200px);visibility:hidden}}
-.stage > .reactor{animation:bootCore 1.25s cubic-bezier(.2,.8,.2,1) .15s backwards}
 .bootmark{position:absolute;left:50%;top:600px;transform:translate(-50%,-50%);z-index:30;pointer-events:none;text-align:center;
   font-family:var(--font-mono);white-space:nowrap;visibility:hidden}
-.bootmark b{display:block;font-size:56px;font-weight:800;color:var(--ice-hi);text-shadow:0 0 24px rgb(var(--ice-rgb)/.9),0 0 60px rgb(var(--ice-rgb)/.5);
-  animation:bootMark 1.7s ease-out .95s both}
-.bootmark span{display:block;margin-top:14px;font-size:13px;letter-spacing:6px;color:var(--ice-bright);
-  animation:bootSub 1.7s ease-out .95s both}
+.bootmark b{display:block;font-size:56px;font-weight:800;color:var(--ice-hi);text-shadow:0 0 24px rgb(var(--ice-rgb)/.9),0 0 60px rgb(var(--ice-rgb)/.5)}
+.bootmark span{display:block;margin-top:14px;font-size:13px;letter-spacing:6px;color:var(--ice-bright)}
 .bootscan{position:absolute;left:0;right:0;top:0;height:3px;z-index:29;pointer-events:none;visibility:hidden;
   background:linear-gradient(90deg,transparent,rgb(var(--ice-rgb)/.85) 20%,var(--ice-hi) 50%,rgb(var(--ice-rgb)/.85) 80%,transparent);
-  box-shadow:0 0 18px rgb(var(--ice-rgb)/.8),0 0 40px rgb(var(--ice-rgb)/.35);
-  animation:bootScan .9s cubic-bezier(.4,0,.6,1) 2.2s both}
+  box-shadow:0 0 18px rgb(var(--ice-rgb)/.8),0 0 40px rgb(var(--ice-rgb)/.35)}
 /* the HUD powers up: left side slides in from the left, right side from the right, staggered */
-.stage > :is(.topstrip,.clock,.vitals,#pwr,.netblk,.baseline,.cooling,.worb,.launch,.office,.powerbtns,.status,.brief){
-  animation:bootIn .6s var(--ease-exit) var(--bd,2.4s) backwards}
 .stage > .topstrip{--by:-18px;--bd:2.35s}
 .stage > .clock{--bx:-34px;--bd:2.45s} .stage > .vitals{--bx:-34px;--bd:2.55s} .stage > #pwr{--bx:-34px;--bd:2.65s}
 .stage > .netblk{--bx:-34px;--bd:2.75s} .stage > .baseline{--bx:-34px;--bd:2.85s}
@@ -1175,12 +1170,27 @@ html:is(.rv-listening,.rv-thinking,.rv-speaking,.rv-answer) .comms{opacity:1;vis
 @keyframes bootType{from{max-width:0}to{max-width:calc(48 * (1ch + 1px))}}
 @keyframes bootLog{0%{opacity:1;visibility:visible}85%{opacity:1}100%{opacity:0;visibility:hidden}}
 .bootlog{position:absolute;left:50%;top:800px;transform:translateX(-50%);z-index:30;pointer-events:none;visibility:hidden;
-  font-family:var(--font-mono);font-size:12px;line-height:19px;letter-spacing:1px;color:rgb(var(--ice-rgb)/.75);
-  animation:bootLog 2s linear 1s both}
-.bootlog div{white-space:nowrap;overflow:hidden;width:max-content;animation:bootType .5s steps(48) var(--t,1s) both}
+  font-family:var(--font-mono);font-size:12px;line-height:19px;letter-spacing:1px;color:rgb(var(--ice-rgb)/.75)}
+.bootlog div{white-space:nowrap;overflow:hidden;width:max-content}
 .bootlog b{font-weight:600;color:var(--ice-hi)}
 .bootlog b.warn{color:var(--gold,#e8b84a)} .bootlog b.bad{color:#ff5a5a}
-.stage > .radar{animation:bootFade .7s ease-out 3.1s backwards}
+/* GATE (core/gate.js, loaded first in <head>; inline scripts are blocked by the CSP): the page starts as html.boot-hold — dark — and only
+   becomes html.boot-go once the PC has settled (smooth frames and CPU under 45%), or
+   after 10 s at most. All the startup animations hang off boot-go, so they run smoothly
+   instead of stuttering while Ubuntu is still loading apps at login. */
+@keyframes bootHold{from,to{opacity:0}}
+/* hidden by a 10 s animation, not a fixed rule: if the gate script ever fails, the hold
+   simply runs out and the HUD appears anyway */
+html.boot-hold .stage > :is(.reactor,.radar,.topstrip,.clock,.vitals,#pwr,.netblk,.baseline,.cooling,.worb,.launch,.office,.powerbtns,.status,.brief){animation:bootHold 10s linear}
+html.boot-go .stage > .reactor{animation:bootCore 1.25s cubic-bezier(.2,.8,.2,1) .15s backwards}
+html.boot-go .bootmark b{animation:bootMark 1.7s ease-out .95s both}
+html.boot-go .bootmark span{animation:bootSub 1.7s ease-out .95s both}
+html.boot-go .bootscan{animation:bootScan .9s cubic-bezier(.4,0,.6,1) 2.2s both}
+html.boot-go .bootlog{animation:bootLog 2s linear 1s both}
+html.boot-go .bootlog div{animation:bootType .5s steps(48) var(--t,1s) both}
+html.boot-go .stage > :is(.topstrip,.clock,.vitals,#pwr,.netblk,.baseline,.cooling,.worb,.launch,.office,.powerbtns,.status,.brief){
+  animation:bootIn .6s var(--ease-exit) var(--bd,2.4s) backwards}
+html.boot-go .stage > .radar{animation:bootFade .7s ease-out 3.1s backwards}
 </style>
 <script src="core/obs-fix.js"></script>
 </head>
