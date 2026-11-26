@@ -4,6 +4,7 @@
   "tokens": {
     "--ink": "#06080b",
     "--ink-2": "#0a0e13",
+    "--ink-lit": "#121c22",
     "--ink-0": "#04060a",
     "--ice": "#78d2ee",
     "--ice-bright": "#a6ecff",

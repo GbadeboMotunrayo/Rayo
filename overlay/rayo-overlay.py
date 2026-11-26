@@ -384,6 +384,15 @@ class Overlay(Gtk.Window):
         except Exception as e:
             print(f"[rayo] bad hud message: {e}", file=sys.stderr)
             return
+        if action == "boot":
+            # one log line per start: when the startup played and why (calm / timeout)
+            why = data.get("why") if data.get("why") in ("calm", "timeout") else "?"
+            try:
+                at = float(data.get("at", 0))
+            except (TypeError, ValueError):
+                at = 0.0
+            print(f"[rayo] startup played at {at:.1f}s ({why})", flush=True)
+            return
         if action == "dnd":
             self._toggle_dnd()
             return
@@ -517,6 +526,32 @@ class Overlay(Gtk.Window):
                   "      then restart the overlay.", file=sys.stderr)
 
 
+def _install_snapshot(win):
+    """Developer aid, off unless Rayo is started with RAYO_SNAP=1: each SIGUSR1
+    saves the real window to /tmp/rayo-snaps/snap-<centiseconds>.png. Used to check
+    motion on the actual overlay, where browser previews don't match (MOTION.md)."""
+    out = "/tmp/rayo-snaps"
+    os.makedirs(out, mode=0o700, exist_ok=True)
+
+    def _do():
+        w = win.get_window()
+        if w is not None:
+            import time as _t
+            pb = Gdk.pixbuf_get_from_window(w, 0, 0, w.get_width(), w.get_height())
+            if pb is not None:
+                pb.savev(f"{out}/snap-{int(_t.time() * 100)}.png", "png", [], [])
+        return False
+
+    def _bench():
+        win.web.run_javascript("window.RayoControl && (document.getElementById('bench').classList.contains('open')"
+                               " ? window.RayoControl.closeBench() : window.RayoControl.openBench())", None, None, None)
+        return False
+
+    signal.signal(signal.SIGUSR1, lambda *_: GLib.idle_add(_do))
+    signal.signal(signal.SIGUSR2, lambda *_: GLib.idle_add(_bench))      # toggles Bench, to snapshot it
+    print(f"[rayo] snapshot mode: kill -USR1 {os.getpid()} saves to {out}; -USR2 toggles Bench", flush=True)
+
+
 def main():
     if not os.path.exists(HUD):
         sys.exit(f"[rayo] HUD not found at {HUD}")
@@ -538,6 +573,8 @@ def main():
 
     win = Overlay(url)
     win.show_all()
+    if os.environ.get("RAYO_SNAP"):
+        _install_snapshot(win)
     Gtk.main()
     cleanup()
 

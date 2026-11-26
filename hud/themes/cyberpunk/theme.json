@@ -2,7 +2,8 @@
   "name": "CYBERPUNK",
   "character": "Neon netrunner",
   "tokens": {
-    "--ink": "#0a0410", "--ink-2": "#120720", "--ink-0": "#06020c",
+    "--ink": "#0a0410", "--ink-2": "#120720",
+    "--ink-lit": "#230a29", "--ink-0": "#06020c",
     "--ice": "#ff2ea6", "--ice-bright": "#ff7cd0", "--ice-deep": "#7a1a5c",
     "--ice-faint": "#3a1030", "--ice-hi": "#ffd9f0", "--ice-abyss": "#2a0820",
     "--ice-rgb": "255 46 166", "--ice-bright-rgb": "255 124 208", "--ice-hi-rgb": "255 217 240",

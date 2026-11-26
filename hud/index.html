@@ -63,9 +63,11 @@ html,body{width:100%;height:100%;overflow:hidden;background:transparent}
 body{
   font-family:var(--font-ui);
   color:var(--paper);
-  /* preview backdrop — the real overlay is transparent over your desktop */
+  /* backdrop. Depth pass: lit by the reactor at the centre (--ink-lit, per theme), darker
+     corners. It is one gradient on purpose: anything layered under the constantly
+     redrawn 3D reactor is repainted with it, so the light costs nothing extra here. */
   background:
-    radial-gradient(120% 90% at 50% 46%, var(--ink-2) 0%, var(--ink) 62%, var(--ink-0) 100%);
+    radial-gradient(120% 90% at 50% 46%, var(--ink-lit, var(--ink-2)) 0%, var(--ink-2) 24%, var(--ink) 58%, var(--ink-0) 84%, #020305 100%);
   -webkit-font-smoothing:antialiased;
   user-select:none;
 }
@@ -628,7 +630,9 @@ html.rayo-idle *::after{animation-play-state:paused!important}
    Double-tap the reactor to summon. Overlay-safe (no CSS filter glows).
    ============================================================ */
 .bench{position:fixed;inset:0;z-index:60;font-family:var(--font-mono);color:var(--paper);
-  background:radial-gradient(70% 90% at 66% 50%, rgb(var(--ice-rgb)/.07), var(--ink-0) 72%), var(--ink-0);
+  /* lit by the core (it sits at 72% 50%): still one gradient, so the spinning wireframe
+     over it costs nothing extra to repaint (depth pass, 26 Nov) */
+  background:radial-gradient(70% 90% at 72% 50%, rgb(var(--ice-rgb)/.12), rgb(var(--ice-rgb)/.04) 30%, var(--ink-0) 70%), var(--ink-0);
   /* hidden = visibility:hidden once the fade-out ends. At opacity:0 alone the
      full-screen Bench was still painted every frame, and its stat bars
      re-animated after every 1s update: ~25% of a core for nothing on screen. */
@@ -1174,9 +1178,65 @@ html:is(.rv-listening,.rv-thinking,.rv-speaking,.rv-answer) .comms{opacity:1;vis
 .bootlog div{white-space:nowrap;overflow:hidden;width:max-content}
 .bootlog b{font-weight:600;color:var(--ice-hi)}
 .bootlog b.warn{color:var(--gold,#e8b84a)} .bootlog b.bad{color:#ff5a5a}
+/* ============================================================
+   DEPTH PASS (26 Nov) — the HUD gets a light source and surfaces. Nothing moves:
+   every effect here is a static shadow or gradient, painted once. No blur and no
+   backdrop-filter (the overlay's software renderer would redo those constantly).
+   1. LIGHT   the reactor lights the room: a soft pool of light round it, darker edges
+              (folded into the body gradient: free under the constantly redrawn reactor).
+   2. PLATES  each text panel sits on a dark plate with a lit top edge. The plate is drawn
+              with stacked box-shadows round the panel (spread = --pl), so no extra
+              elements; the panels' own ::before/::after stay free. The fill is solid:
+              the edge layers sit under it, and a see-through fill would show them as a band.
+   3. SHADOWS fall away from the reactor: left-side plates cast left, right-side right.
+   4. LIFT    big numbers get a dark under-shadow; clock and weather faces become wells.
+   ============================================================ */
+:root{
+  --pl:14px;                                   /* how far a plate reaches past its panel */
+  --plate:#0a1016;                             /* plate fill: solid, so the edge layers under it stay hidden */
+  --plate-hi:rgb(var(--ice-rgb) / .16);        /* lit top edge */
+  --plate-edge:rgb(var(--ice-rgb) / .07);      /* hairline all round */
+}
+/* 1. LIGHT lives in the body background (see body{}), not a layer of its own: a separate
+   full-screen layer under the 3D reactor was repainted with every reactor frame. */
+/* 2 + 3. PLATES, shadows cast away from the reactor (--sx: left side negative, right positive) */
+.stage > :is(.vitals,#pwr,.netblk,.launch,.office){
+  --sx:-14px;border-radius:6px;background-color:var(--plate);
+  box-shadow:
+    0 0 0 var(--pl) var(--plate),
+    0 -1px 0 var(--pl) var(--plate-hi),
+    0 0 0 calc(var(--pl) + 1px) var(--plate-edge),
+    var(--sx) 26px 46px var(--pl) rgba(0,0,0,.55)}
+.stage > :is(.launch,.office){--sx:14px}
+#pwr.cap{top:694px}   /* 30px lower than before so its plate clears the vitals plate */
+.stage > :is(.vitals,.netblk){width:310px}   /* same width as the power grid: one straight left column */
+#pwr.cap.charging{box-shadow:
+    0 0 0 var(--pl) var(--plate),
+    0 -1px 0 var(--pl) rgba(201,162,75,.3),
+    0 0 0 calc(var(--pl) + 1px) rgba(201,162,75,.12),
+    var(--sx) 26px 46px var(--pl) rgba(0,0,0,.55)}
+/* the status strip and the next-event line get a slimmer pill */
+.stage > :is(.topstrip,.brief){border-radius:999px;background-color:var(--plate);
+  box-shadow:0 0 0 10px var(--plate),0 -1px 0 10px var(--plate-hi),0 0 0 11px var(--plate-edge),0 16px 30px 10px rgba(0,0,0,.45)}
+.stage > .brief:not(:has(.b-row:not([hidden]))){background:none;box-shadow:none}   /* nothing to show, no pill */
+/* BENCH: the diagnostics column and the command line sit on plates; the core is on
+   the right, so their shadows fall to the left. Nothing goes near the spinning
+   wireframe (anything under it would be repainted with every step of the spin). */
+.bench :is(.diag,.cli){border-radius:6px;background-color:var(--plate);
+  box-shadow:0 0 0 var(--pl) var(--plate),0 -1px 0 var(--pl) var(--plate-hi),
+    0 0 0 calc(var(--pl) + 1px) var(--plate-edge),-14px 26px 46px var(--pl) rgba(0,0,0,.55)}
+.bench .diag .sec:first-child{margin-top:0}   /* the plate is the top edge now */
+.bench .bhead h1{text-shadow:0 2px 12px rgba(0,0,0,.8)}
+.bench .bhead h1 b{text-shadow:0 0 14px rgb(var(--ice-rgb)/.7),0 2px 12px rgba(0,0,0,.8)}
+/* 4. LIFT: big numbers stand off their surface */
+.clock .face .h,.worb .deg,.office .of-n,.vitals :is(text,b,.n,.num){text-shadow:0 2px 10px rgba(0,0,0,.8),0 1px 1px rgba(0,0,0,.6)}
+/* clock and weather faces read as recessed wells */
+.clock .face,.worb .face{border-radius:50%;
+  background:radial-gradient(circle, rgba(0,0,0,.42) 0 46%, rgba(0,0,0,.18) 60%, transparent 72%)}
+
 /* GATE (core/gate.js, loaded first in <head>; inline scripts are blocked by the CSP): the page starts as html.boot-hold — dark — and only
-   becomes html.boot-go once the PC has settled (smooth frames and CPU under 45%), or
-   after 10 s at most. All the startup animations hang off boot-go, so they run smoothly
+   becomes html.boot-go once the page has loaded and its timers run on time for 0.6 s, or
+   after 6 s at most. All the startup animations hang off boot-go, so they run smoothly
    instead of stuttering while Ubuntu is still loading apps at login. */
 @keyframes bootHold{from,to{opacity:0}}
 /* hidden by a 10 s animation, not a fixed rule: if the gate script ever fails, the hold
