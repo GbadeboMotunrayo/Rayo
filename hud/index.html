@@ -620,6 +620,8 @@ html.rayo-idle *::after{animation-play-state:paused!important}
 /* "charging · 48m to full" is longer than "on battery": keep every row on one line */
 #pwr.cap{width:310px}
 .cap .row{white-space:nowrap;gap:14px}
+/* never spill out of the plate: the label stays whole, the value is cut with "…" if it must */
+.cap .row .k{flex:none} .cap .row .v{min-width:0;overflow:hidden;text-overflow:ellipsis}
 #pwr.cap.charging{box-shadow:none;border:0}
 .vitals{top:404px}
 .cooling{left:50%;transform:translateX(-50%);bottom:52px}

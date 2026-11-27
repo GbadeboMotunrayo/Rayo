@@ -195,15 +195,21 @@
     const h = Math.floor(min / 60), m = min % 60;
     return h ? `${h}h ${String(m).padStart(2, '0')}m` : `${m}m`;
   };
+  // short on purpose: it shares one 310px row with POWER GRID and the %. The gold colour
+  // and bar already say "charging", so the label only adds the time or the reason.
   const battLabel = (d) => {
     const status = d.batt_status || (d.charging ? 'Charging' : 'Discharging');
     if (d.power === 'plugged') {                    // connected, not charging: full or held at the limit
       if (status === 'Full' || d.battery >= 99) return 'plugged in · full';
-      return d.charge_limit && d.battery >= d.charge_limit - 2 ? `plugged in · held at ${d.charge_limit}%` : 'plugged in';
+      if (d.charge_limit && d.battery >= d.charge_limit - 2) return `held at ${d.charge_limit}%`;
+      // charger in, battery well below its limit, yet nothing flowing in: a weak or faulty
+      // charger, cable or port. Say so rather than a reassuring "plugged in".
+      return d.charge_limit && d.battery < d.charge_limit - 2 ? 'not charging' : 'plugged in';
     }
     if (status === 'Full' || d.battery >= 100 && d.charging) return 'full · on AC';
     const t = fmtDur(d.batt_min);
-    if (status === 'Charging') return t ? `charging · ${t} to full` : 'charging';
+    // a weak charger (or one barely trickling) gives absurd estimates like 2689h: say so instead
+    if (status === 'Charging') return d.batt_min > 1440 ? 'charging slowly' : t ? `${t} to full` : 'charging';
     if (status === 'Discharging') return t ? `${t} left` : 'on battery';
     return d.charging ? 'charging' : 'on battery';
   };
